@@ -21,12 +21,14 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.0",
-    "axios": "^1.6.2",
-    "cheerio": "^1.0.0-rc.12",
+    "axios": "^1.13.2",
+    "cheerio": "^1.1.2",
     "dotenv": "^16.3.1",
     "form-data": "^4.0.0",
     "https-proxy-agent": "^7.0.6",
     "node-cron": "^3.0.3",
-    "openai": "^4.20.1"
+    "openai": "^4.20.1",
+    "rss-parser": "^3.13.0",
+    "xml2js": "^0.6.2"
   }
 }

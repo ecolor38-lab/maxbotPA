@@ -1,5 +1,5 @@
 import { config } from './config/config.js';
-import { NewsCollector } from './services/newsCollector.js';
+import { ScientificNewsCollector } from './services/scientificNewsCollector.js';
 import { AISummarizer } from './services/aiSummarizer.js';
 import { ImageGenerator } from './services/imageGenerator.js';
 import { HashtagGenerator } from './services/hashtagGenerator.js';
@@ -7,7 +7,7 @@ import { TelegramPublisherNative } from './services/telegramPublisherNative.js';
 
 export class ArthritisInfoBot {
   constructor() {
-    this.newsCollector = new NewsCollector(config);
+    this.newsCollector = new ScientificNewsCollector(config);
     this.aiSummarizer = new AISummarizer(config);
     this.imageGenerator = new ImageGenerator(config);
     this.hashtagGenerator = new HashtagGenerator(config);
@@ -15,7 +15,7 @@ export class ArthritisInfoBot {
   }
 
   async run() {
-    console.log('🚀 Запуск бота для сбора информации о псориатическом артрите...\n');
+    console.log('🚀 Запуск бота для сбора медицинских новостей...\n');
 
     try {
       const connectionOk = await this.telegramPublisher.testConnection();
@@ -26,7 +26,20 @@ export class ArthritisInfoBot {
         console.log('');
       }
 
-      const articles = await this.newsCollector.collectNews();
+      // Собираем новости из научных источников
+      let articles;
+      try {
+        articles = await this.newsCollector.collectNews();
+
+        // Если реальных статей нет, используем демо
+        if (articles.length === 0) {
+          console.log('⚠️ Реальных новостей не найдено, используем демо-статьи\n');
+          articles = this.newsCollector.getDemoArticles();
+        }
+      } catch (error) {
+        console.log('⚠️ Ошибка при сборе новостей, используем демо-статьи\n');
+        articles = this.newsCollector.getDemoArticles();
+      }
 
       if (articles.length === 0) {
         console.log('⚠️ Новых статей не найдено');
@@ -39,11 +52,18 @@ export class ArthritisInfoBot {
 
       const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
+      // ВАЖНО: Всегда генерируем изображение для более привлекательного поста
       let imagePath = null;
-      if (config.openai.apiKey) {
+      console.log('🎨 Генерирую изображение для поста...');
+      try {
         const imagePrompt = await this.aiSummarizer.generateImagePrompt(postText);
         const imageData = await this.imageGenerator.generateImage(imagePrompt);
         imagePath = imageData ? imageData.path : null;
+        if (imagePath) {
+          console.log(`✅ Изображение создано: ${imagePath}`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Не удалось создать изображение: ${error.message}`);
       }
 
       console.log('\n📝 Предпросмотр поста:\n');
@@ -75,6 +95,50 @@ export class ArthritisInfoBot {
       console.error(error.stack);
       throw error;
     }
+  }
+
+  // Метод для генерации и публикации из предоставленных статей
+  async generateAndPublish(articles) {
+    console.log(`📚 Генерирую пост из ${articles.length} статей...\n`);
+
+    const postText = await this.aiSummarizer.generateSummary(articles);
+    const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
+
+    // Генерируем изображение
+    let imagePath = null;
+    console.log('🎨 Генерирую изображение для поста...');
+    try {
+      const imagePrompt = await this.aiSummarizer.generateImagePrompt(postText);
+      const imageData = await this.imageGenerator.generateImage(imagePrompt);
+      imagePath = imageData ? imageData.path : null;
+      if (imagePath) {
+        console.log(`✅ Изображение создано: ${imagePath}`);
+      } else {
+        console.log(`⚠️ Изображение не создано`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Ошибка генерации изображения: ${error.message}`);
+    }
+
+    console.log('\n📝 Предпросмотр поста:\n');
+    console.log('─'.repeat(60));
+    console.log(postText);
+    console.log('\n' + hashtags);
+    if (imagePath) {
+      console.log(`\n🖼️ Изображение: ${imagePath}`);
+    }
+    console.log('─'.repeat(60) + '\n');
+
+    // Публикуем
+    const result = await this.telegramPublisher.publish(postText, hashtags, imagePath, articles);
+
+    console.log('✅ Пост опубликован!');
+    console.log(`📊 Статистика:`);
+    console.log(`   - Статей: ${articles.length}`);
+    console.log(`   - Длина: ${postText.length} символов`);
+    console.log(`   - Изображение: ${imagePath ? 'Да (' + imagePath + ')' : 'Нет'}`);
+
+    return result;
   }
 }
 
