@@ -50,9 +50,8 @@ export class MaxBotPublisher {
   async publishTextOnly(text) {
     try {
       const response = await axios.post(
-        `${this.apiUrl}/messages`,
+        `${this.apiUrl}/chats/${this.chatId}/messages`,
         {
-          chat_id: this.chatId,
           text: text,
           format: 'markdown'
         },
@@ -76,9 +75,8 @@ export class MaxBotPublisher {
       const uploadedFile = await this.uploadFile(imagePath);
 
       const response = await axios.post(
-        `${this.apiUrl}/messages`,
+        `${this.apiUrl}/chats/${this.chatId}/messages`,
         {
-          chat_id: this.chatId,
           text: text,
           format: 'markdown',
           attachments: [
