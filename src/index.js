@@ -3,7 +3,7 @@ import { NewsCollector } from './services/newsCollector.js';
 import { AISummarizer } from './services/aiSummarizer.js';
 import { ImageGenerator } from './services/imageGenerator.js';
 import { HashtagGenerator } from './services/hashtagGenerator.js';
-import { TelegramPublisher } from './services/telegramPublisher.js';
+import { TelegramPublisherNative } from './services/telegramPublisherNative.js';
 
 export class ArthritisInfoBot {
   constructor() {
@@ -11,7 +11,7 @@ export class ArthritisInfoBot {
     this.aiSummarizer = new AISummarizer(config);
     this.imageGenerator = new ImageGenerator(config);
     this.hashtagGenerator = new HashtagGenerator(config);
-    this.telegramPublisher = new TelegramPublisher(config);
+    this.telegramPublisher = new TelegramPublisherNative(config);
   }
 
   async run() {
