@@ -3,7 +3,7 @@ import { NewsCollector } from './services/newsCollector.js';
 import { AISummarizer } from './services/aiSummarizer.js';
 import { ImageGenerator } from './services/imageGenerator.js';
 import { HashtagGenerator } from './services/hashtagGenerator.js';
-import { MaxBotPublisher } from './services/maxbotPublisher.js';
+import { TelegramPublisher } from './services/telegramPublisher.js';
 
 export class ArthritisInfoBot {
   constructor() {
@@ -11,16 +11,16 @@ export class ArthritisInfoBot {
     this.aiSummarizer = new AISummarizer(config);
     this.imageGenerator = new ImageGenerator(config);
     this.hashtagGenerator = new HashtagGenerator(config);
-    this.maxbotPublisher = new MaxBotPublisher(config);
+    this.telegramPublisher = new TelegramPublisher(config);
   }
 
   async run() {
     console.log('🚀 Запуск бота для сбора информации о псориатическом артрите...\n');
 
     try {
-      const connectionOk = await this.maxbotPublisher.testConnection();
+      const connectionOk = await this.telegramPublisher.testConnection();
       if (!connectionOk) {
-        console.log('⚠️ Не удалось подключиться к Max Bot API');
+        console.log('⚠️ Не удалось подключиться к Telegram Bot API');
         console.log('📝 Бот будет работать в режиме сохранения постов в файлы\n');
       } else {
         console.log('');
@@ -50,13 +50,17 @@ export class ArthritisInfoBot {
       console.log('─'.repeat(60));
       console.log(postText);
       console.log('\n' + hashtags);
+      console.log('\n📚 Источники:');
+      articles.forEach((article, index) => {
+        console.log(`${index + 1}. ${article.source}: ${article.url}`);
+      });
       console.log('─'.repeat(60));
       if (imagePath) {
         console.log(`\n🖼️ Изображение: ${imagePath}`);
       }
       console.log('');
 
-      const result = await this.maxbotPublisher.publish(postText, hashtags, imagePath);
+      const result = await this.telegramPublisher.publish(postText, hashtags, imagePath, articles);
 
       console.log('\n✅ Задача выполнена успешно!');
       console.log(`📊 Статистика:`);

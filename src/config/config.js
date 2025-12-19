@@ -2,6 +2,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN,
+    channelId: process.env.TELEGRAM_CHANNEL_ID || null
+  },
   maxbot: {
     apiToken: process.env.MAXBOT_API_TOKEN,
     apiUrl: 'https://platform-api.max.ru',
