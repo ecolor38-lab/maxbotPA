@@ -77,8 +77,6 @@ export class TelegramPublisher {
         },
         {
           timeout: 30000,
-          maxRedirects: 0,
-          proxy: false,
           validateStatus: (status) => status < 500
         }
       );
@@ -111,8 +109,6 @@ export class TelegramPublisher {
           maxContentLength: Infinity,
           maxBodyLength: Infinity,
           timeout: 60000,
-          maxRedirects: 0,
-          proxy: false,
           validateStatus: (status) => status < 500
         }
       );
@@ -155,8 +151,6 @@ export class TelegramPublisher {
     try {
       const response = await axios.get(`${this.apiUrl}/getMe`, {
         timeout: 30000,
-        maxRedirects: 0,
-        proxy: false,
         validateStatus: (status) => status < 500
       });
 
