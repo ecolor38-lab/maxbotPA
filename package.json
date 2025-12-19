@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "schedule": "node src/scheduler.js",
+    "get-chat-id": "node scripts/getChatId.js",
     "dev": "node --watch src/index.js",
     "test": "echo \"Running tests...\" && exit 0"
   },
