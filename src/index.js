@@ -20,9 +20,11 @@ export class ArthritisInfoBot {
     try {
       const connectionOk = await this.maxbotPublisher.testConnection();
       if (!connectionOk) {
-        throw new Error('Не удалось подключиться к Max Bot API');
+        console.log('⚠️ Не удалось подключиться к Max Bot API');
+        console.log('📝 Бот будет работать в режиме сохранения постов в файлы\n');
+      } else {
+        console.log('');
       }
-      console.log('');
 
       const articles = await this.newsCollector.collectNews();
 

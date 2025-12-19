@@ -1,36 +1,46 @@
 import axios from 'axios';
 import FormData from 'form-data';
-import fs from 'fs';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class MaxBotPublisher {
   constructor(config) {
     this.config = config;
     this.apiUrl = config.maxbot.apiUrl;
     this.apiToken = config.maxbot.apiToken;
+    this.chatId = config.maxbot.chatId;
   }
 
   async publish(postText, hashtags, imagePath = null) {
+    const fullText = `${postText}\n\n${hashtags}`;
+
+    await this.saveToFile(fullText, imagePath);
+
+    if (!this.chatId) {
+      console.log('⚠️ CHAT_ID не указан - пост сохранен в файл, но не опубликован');
+      console.log('💡 Добавьте CHAT_ID в .env для автоматической публикации');
+      return null;
+    }
+
     console.log('📤 Публикую пост в Max Bot...');
 
     try {
-      const fullText = `${postText}\n\n${hashtags}`;
-
       let postData;
 
-      if (imagePath && fs.existsSync(imagePath)) {
+      if (imagePath && await this.fileExists(imagePath)) {
         postData = await this.publishWithImage(fullText, imagePath);
       } else {
         postData = await this.publishTextOnly(fullText);
       }
 
       console.log('✅ Пост успешно опубликован в Max Bot!');
-      console.log('📊 ID поста:', postData.id || 'N/A');
+      console.log('📊 ID сообщения:', postData.message_id || 'N/A');
 
       return postData;
     } catch (error) {
       console.error('❌ Ошибка при публикации:', error.message);
       if (error.response) {
-        console.error('Ответ сервера:', error.response.data);
+        console.error('Ответ сервера:', JSON.stringify(error.response.data, null, 2));
         console.error('Статус:', error.response.status);
       }
       throw error;
@@ -40,14 +50,15 @@ export class MaxBotPublisher {
   async publishTextOnly(text) {
     try {
       const response = await axios.post(
-        `${this.apiUrl}/posts`,
+        `${this.apiUrl}/messages`,
         {
+          chat_id: this.chatId,
           text: text,
-          publish: true
+          format: 'markdown'
         },
         {
           headers: {
-            'Authorization': `Bearer ${this.apiToken}`,
+            'Authorization': this.apiToken,
             'Content-Type': 'application/json'
           }
         }
@@ -62,17 +73,51 @@ export class MaxBotPublisher {
 
   async publishWithImage(text, imagePath) {
     try {
-      const formData = new FormData();
-      formData.append('text', text);
-      formData.append('publish', 'true');
-      formData.append('image', fs.createReadStream(imagePath));
+      const uploadedFile = await this.uploadFile(imagePath);
 
       const response = await axios.post(
-        `${this.apiUrl}/posts`,
+        `${this.apiUrl}/messages`,
+        {
+          chat_id: this.chatId,
+          text: text,
+          format: 'markdown',
+          attachments: [
+            {
+              type: 'image',
+              payload: {
+                file_id: uploadedFile.file_id
+              }
+            }
+          ]
+        },
+        {
+          headers: {
+            'Authorization': this.apiToken,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Ошибка при публикации с изображением:', error.message);
+      console.log('Пытаюсь опубликовать только текст...');
+      return await this.publishTextOnly(text);
+    }
+  }
+
+  async uploadFile(filePath) {
+    try {
+      const formData = new FormData();
+      const fileBuffer = await fs.readFile(filePath);
+      formData.append('file', fileBuffer, path.basename(filePath));
+
+      const response = await axios.post(
+        `${this.apiUrl}/upload`,
         formData,
         {
           headers: {
-            'Authorization': `Bearer ${this.apiToken}`,
+            'Authorization': this.apiToken,
             ...formData.getHeaders()
           },
           maxContentLength: Infinity,
@@ -82,10 +127,32 @@ export class MaxBotPublisher {
 
       return response.data;
     } catch (error) {
-      console.error('Ошибка при публикации с изображением:', error.message);
+      console.error('Ошибка при загрузке файла:', error.message);
+      throw error;
+    }
+  }
 
-      console.log('Пытаюсь опубликовать только текст...');
-      return await this.publishTextOnly(text);
+  async saveToFile(text, imagePath = null) {
+    try {
+      const postsDir = path.join(process.cwd(), 'posts');
+      await fs.mkdir(postsDir, { recursive: true });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const txtPath = path.join(postsDir, `post_${timestamp}.txt`);
+
+      let fileContent = `${text}\n\n`;
+      if (imagePath) {
+        fileContent += `Изображение: ${imagePath}\n`;
+      }
+      fileContent += `\nСоздано: ${new Date().toLocaleString('ru-RU')}\n`;
+
+      await fs.writeFile(txtPath, fileContent, 'utf8');
+
+      console.log(`💾 Пост сохранен в файл: ${txtPath}`);
+
+      return txtPath;
+    } catch (error) {
+      console.error('Ошибка при сохранении в файл:', error.message);
     }
   }
 
@@ -97,13 +164,16 @@ export class MaxBotPublisher {
         `${this.apiUrl}/me`,
         {
           headers: {
-            'Authorization': `Bearer ${this.apiToken}`
+            'Authorization': this.apiToken
           }
         }
       );
 
       console.log('✅ Соединение установлено!');
       console.log('👤 Бот:', response.data.name || response.data.username || 'N/A');
+      if (response.data.username) {
+        console.log(`📱 Username: @${response.data.username}`);
+      }
 
       return true;
     } catch (error) {
@@ -116,21 +186,12 @@ export class MaxBotPublisher {
     }
   }
 
-  async getPostStats(postId) {
+  async fileExists(filePath) {
     try {
-      const response = await axios.get(
-        `${this.apiUrl}/posts/${postId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiToken}`
-          }
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error('Ошибка при получении статистики поста:', error.message);
-      return null;
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
     }
   }
 }

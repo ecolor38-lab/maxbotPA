@@ -4,7 +4,8 @@ dotenv.config();
 export const config = {
   maxbot: {
     apiToken: process.env.MAXBOT_API_TOKEN,
-    apiUrl: 'https://api.max.bot/v1'
+    apiUrl: 'https://platform-api.max.ru',
+    chatId: process.env.CHAT_ID || null
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
