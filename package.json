@@ -1,0 +1,30 @@
+{
+  "name": "maxbot-arthritis-ai",
+  "version": "1.0.0",
+  "description": "AI-powered bot для сбора информации о псориатическом артрите и публикации в Max Bot",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "schedule": "node src/scheduler.js",
+    "dev": "node --watch src/index.js",
+    "test": "echo \"Running tests...\" && exit 0"
+  },
+  "keywords": [
+    "maxbot",
+    "psoriatic-arthritis",
+    "ai",
+    "medical-news"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "axios": "^1.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.3.1",
+    "node-cron": "^3.0.3",
+    "openai": "^4.20.1",
+    "form-data": "^4.0.0"
+  }
+}
