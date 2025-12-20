@@ -57,7 +57,7 @@ export class ImageGenerator {
   async generatePromptWithClaude(basicPrompt) {
     try {
       const message = await this.anthropic.messages.create({
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 300,
         messages: [{
           role: 'user',
