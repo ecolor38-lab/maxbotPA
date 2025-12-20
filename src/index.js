@@ -53,14 +53,13 @@ export class AIBusinessBot {
       const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
       // ВАЖНО: Всегда генерируем изображение для более привлекательного поста
-      let imagePath = null;
+      let imageData = null;
       console.log('🎨 Генерирую изображение для поста...');
       try {
         const imagePrompt = await this.aiSummarizer.generateImagePrompt(postText);
-        const imageData = await this.imageGenerator.generateImage(imagePrompt);
-        imagePath = imageData ? imageData.path : null;
-        if (imagePath) {
-          console.log(`✅ Изображение создано: ${imagePath}`);
+        imageData = await this.imageGenerator.generateImage(imagePrompt);
+        if (imageData && (imageData.path || imageData.url)) {
+          console.log(`✅ Изображение создано: ${imageData.path || imageData.url}`);
         }
       } catch (error) {
         console.log(`⚠️ Не удалось создать изображение: ${error.message}`);
@@ -75,12 +74,12 @@ export class AIBusinessBot {
         console.log(`${index + 1}. ${article.source}: ${article.url}`);
       });
       console.log('─'.repeat(60));
-      if (imagePath) {
-        console.log(`\n🖼️ Изображение: ${imagePath}`);
+      if (imageData && (imageData.path || imageData.url)) {
+        console.log(`\n🖼️ Изображение: ${imageData.path || imageData.url}`);
       }
       console.log('');
 
-      const result = await this.telegramPublisher.publish(postText, hashtags, imagePath, articles);
+      const result = await this.telegramPublisher.publish(postText, hashtags, imageData, articles);
 
       console.log('\n✅ Задача выполнена успешно!');
       console.log(`📊 Статистика:`);
@@ -105,14 +104,13 @@ export class AIBusinessBot {
     const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
     // Генерируем изображение
-    let imagePath = null;
+    let imageData = null;
     console.log('🎨 Генерирую изображение для поста...');
     try {
       const imagePrompt = await this.aiSummarizer.generateImagePrompt(postText);
-      const imageData = await this.imageGenerator.generateImage(imagePrompt);
-      imagePath = imageData ? imageData.path : null;
-      if (imagePath) {
-        console.log(`✅ Изображение создано: ${imagePath}`);
+      imageData = await this.imageGenerator.generateImage(imagePrompt);
+      if (imageData && (imageData.path || imageData.url)) {
+        console.log(`✅ Изображение создано: ${imageData.path || imageData.url}`);
       } else {
         console.log(`⚠️ Изображение не создано`);
       }
@@ -124,19 +122,19 @@ export class AIBusinessBot {
     console.log('─'.repeat(60));
     console.log(postText);
     console.log('\n' + hashtags);
-    if (imagePath) {
-      console.log(`\n🖼️ Изображение: ${imagePath}`);
+    if (imageData && (imageData.path || imageData.url)) {
+      console.log(`\n🖼️ Изображение: ${imageData.path || imageData.url}`);
     }
     console.log('─'.repeat(60) + '\n');
 
     // Публикуем
-    const result = await this.telegramPublisher.publish(postText, hashtags, imagePath, articles);
+    const result = await this.telegramPublisher.publish(postText, hashtags, imageData, articles);
 
     console.log('✅ Пост опубликован!');
     console.log(`📊 Статистика:`);
     console.log(`   - Статей: ${articles.length}`);
     console.log(`   - Длина: ${postText.length} символов`);
-    console.log(`   - Изображение: ${imagePath ? 'Да (' + imagePath + ')' : 'Нет'}`);
+    console.log(`   - Изображение: ${imageData ? 'Да (' + (imageData.path || imageData.url) + ')' : 'Нет'}`);
 
     return result;
   }
