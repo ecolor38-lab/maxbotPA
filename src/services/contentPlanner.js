@@ -46,7 +46,7 @@ export class ContentPlanner {
   }
 
   async addArticlesToPlan(articles) {
-    const plan = await loadPlan();
+    const plan = await this.loadPlan();
 
     // Группируем статьи по категориям
     const byCategory = {
@@ -81,35 +81,28 @@ export class ContentPlanner {
 
   createPosts(articles, settings) {
     const posts = [];
-    const { minArticlesPerPost, maxArticlesPerPost } = settings;
+    const postsPerDay = settings.postsPerDay || 3;
 
-    // Группируем статьи для постов
-    let currentBatch = [];
+    // Разделяем статьи на равные части для 3 постов в день
+    const articlesPerPost = Math.ceil(articles.length / postsPerDay);
 
-    for (const article of articles) {
-      currentBatch.push(article);
+    console.log(`📋 Создаю ${postsPerDay} поста из ${articles.length} новостей (по ${articlesPerPost} в каждом)`);
 
-      if (currentBatch.length >= maxArticlesPerPost) {
+    for (let i = 0; i < postsPerDay; i++) {
+      const start = i * articlesPerPost;
+      const end = Math.min(start + articlesPerPost, articles.length);
+      const batch = articles.slice(start, end);
+
+      if (batch.length > 0) {
         posts.push({
-          id: Date.now() + posts.length,
-          articles: [...currentBatch],
+          id: Date.now() + i,
+          articles: batch,
           scheduledFor: null,
           status: 'pending',
           createdAt: new Date().toISOString()
         });
-        currentBatch = [];
+        console.log(`   Пост ${i + 1}: ${batch.length} новостей`);
       }
-    }
-
-    // Добавляем остаток если есть минимум статей
-    if (currentBatch.length >= minArticlesPerPost) {
-      posts.push({
-        id: Date.now() + posts.length,
-        articles: currentBatch,
-        scheduledFor: null,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      });
     }
 
     return posts;
