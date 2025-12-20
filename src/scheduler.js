@@ -93,24 +93,48 @@ class BotScheduler {
   }
 
   async runScheduledPost() {
-    // Проверяем очередь
-    const nextPost = await this.contentPlanner.getNextPost();
+    const postsPerBatch = parseInt(process.env.POSTS_PER_BATCH) || 3;
 
-    if (!nextPost) {
+    console.log(`📦 Публикация пакета (до ${postsPerBatch} постов)...\n`);
+
+    // Проверяем очередь
+    const plan = await this.contentPlanner.loadPlan();
+    const availablePosts = plan.queue.filter(p => p.status === 'pending');
+
+    if (availablePosts.length === 0) {
       console.log('📭 Очередь постов пуста, собираю новые новости...');
       await this.collectAndPlan();
 
-      // Пробуем еще раз
-      const newPost = await this.contentPlanner.getNextPost();
-      if (!newPost) {
+      // Обновляем план после сбора
+      const updatedPlan = await this.contentPlanner.loadPlan();
+      const newPosts = updatedPlan.queue.filter(p => p.status === 'pending');
+
+      if (newPosts.length === 0) {
         console.log('⚠️ Не удалось собрать новости для публикации');
         return;
       }
-
-      return await this.publishPost(newPost);
     }
 
-    return await this.publishPost(nextPost);
+    // Публикуем до postsPerBatch постов
+    const postsToPublish = Math.min(postsPerBatch, availablePosts.length);
+
+    console.log(`📤 Публикую ${postsToPublish} постов...\n`);
+
+    for (let i = 0; i < postsToPublish; i++) {
+      const post = await this.contentPlanner.getNextPost();
+
+      if (post) {
+        await this.publishPost(post);
+
+        // Небольшая задержка между постами (5 секунд)
+        if (i < postsToPublish - 1) {
+          console.log('⏳ Пауза 5 секунд перед следующим постом...\n');
+          await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+      }
+    }
+
+    console.log(`\n✅ Опубликовано ${postsToPublish} постов`);
   }
 
   async publishPost(post) {

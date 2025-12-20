@@ -1,10 +1,12 @@
 import Parser from 'rss-parser';
 import axios from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
+import { NewsAnalyzer } from './newsAnalyzer.js';
 
 export class AIBusinessNewsCollector {
   constructor(config) {
     this.config = config;
+    this.newsAnalyzer = new NewsAnalyzer(config);
     this.parser = new Parser({
       timeout: 30000,
       customFields: {
@@ -96,7 +98,17 @@ export class AIBusinessNewsCollector {
 
     console.log(`\n✅ Всего найдено релевантных статей: ${sortedArticles.length}`);
 
-    return sortedArticles.slice(0, this.config.search.maxNewsItems || 10);
+    // Берем больше статей для анализа (maxNewsItems или 20)
+    const candidateArticles = sortedArticles.slice(0, this.config.search.maxNewsItems || 20);
+
+    // Анализируем на достоверность и интересность
+    const analyzedArticles = await this.newsAnalyzer.analyzeArticles(candidateArticles);
+
+    // Выбираем топ-3 лучших
+    const postsPerBatch = parseInt(process.env.POSTS_PER_BATCH) || 3;
+    const topArticles = this.newsAnalyzer.selectTopArticles(analyzedArticles, postsPerBatch);
+
+    return topArticles;
   }
 
   async parseRSSFeed(source) {
