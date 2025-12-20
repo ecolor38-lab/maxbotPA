@@ -86,7 +86,7 @@ export class AIBusinessBot {
       console.log(`   - Найдено статей: ${articles.length}`);
       console.log(`   - Длина поста: ${postText.length} символов`);
       console.log(`   - Хештегов: ${hashtags.split(' ').length}`);
-      console.log(`   - Изображение: ${imagePath ? 'Да' : 'Нет'}`);
+      console.log(`   - Изображение: ${imageData ? 'Да' : 'Нет'}`);
 
       return result;
     } catch (error) {
