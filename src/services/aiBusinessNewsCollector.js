@@ -173,7 +173,9 @@ export class AIBusinessNewsCollector {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysBack);
 
-    return articles.filter(article => {
+    console.log(`📅 Фильтрация новостей: только за последние ${daysBack} дней (с ${cutoffDate.toLocaleDateString('ru-RU')})`);
+
+    const filtered = articles.filter(article => {
       // Фильтр по дате
       if (article.pubDate < cutoffDate) return false;
 
@@ -182,16 +184,28 @@ export class AIBusinessNewsCollector {
 
       return true;
     });
+
+    console.log(`   Отфильтровано: ${filtered.length} из ${articles.length} статей актуальны`);
+
+    return filtered;
   }
 
   sortByRelevance(articles) {
-    return articles.sort((a, b) => {
+    const sorted = articles.sort((a, b) => {
       // Сортировка по приоритету источника и дате
       if (a.priority !== b.priority) {
         return b.priority - a.priority;
       }
       return b.pubDate - a.pubDate;
     });
+
+    // Показываем самые свежие новости
+    if (sorted.length > 0) {
+      const newest = sorted[0];
+      console.log(`📰 Самая свежая новость: ${newest.title.substring(0, 60)}... (${newest.pubDate.toLocaleDateString('ru-RU')})`);
+    }
+
+    return sorted;
   }
 
   // Демо статьи для тестирования
