@@ -55,8 +55,9 @@ class BotScheduler {
       }
 
       cron.schedule(schedule.time, async () => {
+        const timezone = process.env.TIMEZONE || 'Asia/Irkutsk';
         const now = new Date().toLocaleString('ru-RU', {
-          timeZone: 'Europe/Moscow',
+          timeZone: timezone,
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -65,7 +66,7 @@ class BotScheduler {
         });
 
         console.log(`\n${'='.repeat(70)}`);
-        console.log(`⏰ ${schedule.name}: ${now}`);
+        console.log(`⏰ ${schedule.name}: ${now} (${timezone})`);
         console.log('='.repeat(70) + '\n');
 
         try {

@@ -106,30 +106,53 @@ ${articlesText}
   async generateImagePrompt(postText) {
     console.log('🎨 Генерирую промпт для изображения...');
 
-    const prompt = `На основе этого поста создай короткий промпт (на английском, до 100 слов) для генерации иллюстрации DALL-E.
+    // Простой fallback промпт на основе ключевых слов
+    const keywords = this.extractKeywords(postText);
+    const fallbackPrompt = `Professional medical infographic about ${keywords}. Modern scientific illustration with blue gradient background, molecules, cells, medical symbols, and technology icons. Horizontal layout, clean design, no text, no people.`;
+
+    const prompt = `На основе этого поста создай короткий промпт (на английском, до 100 слов) для генерации медицинской иллюстрации.
 
 Пост:
 ${postText}
 
-Требования к промпту:
-- Медицинская тематика, профессиональная инфографика
-- Стиль: современный, чистый, научно-популярный
-- Цветовая гамма: синий, белый, светлые тона
-- Избегай изображения реальных людей
-- Фокус на концептах: молекулы, клетки, медицинские символы, технологии
-- Формат: горизонтальный, подходит для поста в соц.сетях
+Требования: медицинская тематика, современный стиль, синий/белый цвета, без людей, фокус на молекулах и технологиях.
+Верни только промпт на английском.`;
 
-Верни только промпт на английском, без дополнительных пояснений.`;
+    try {
+      let imagePrompt;
+      if (this.anthropic) {
+        imagePrompt = await this.generateWithClaude(prompt);
+      } else if (this.openai) {
+        imagePrompt = await this.generateWithOpenAI(prompt);
+      } else {
+        console.log('⚠️ API не настроены, использую простой промпт');
+        return fallbackPrompt;
+      }
 
-    let imagePrompt;
-    if (this.anthropic) {
-      imagePrompt = await this.generateWithClaude(prompt);
-    } else if (this.openai) {
-      imagePrompt = await this.generateWithOpenAI(prompt);
+      console.log('✅ Промпт для изображения создан через AI');
+      return imagePrompt;
+    } catch (error) {
+      console.log('⚠️ Ошибка AI, использую простой промпт');
+      return fallbackPrompt;
+    }
+  }
+
+  extractKeywords(text) {
+    const medicalKeywords = [
+      'артрит', 'arthritis', 'псориатический', 'psoriatic',
+      'лечение', 'treatment', 'препарат', 'drug', 'medication',
+      'AI', 'ИИ', 'искусственный интеллект', 'клиническ', 'clinical',
+      'терапия', 'therapy', 'биологический', 'biologic'
+    ];
+
+    const found = [];
+    for (const keyword of medicalKeywords) {
+      if (text.toLowerCase().includes(keyword.toLowerCase())) {
+        found.push(keyword);
+      }
     }
 
-    console.log('✅ Промпт для изображения создан');
-    return imagePrompt;
+    return found.slice(0, 3).join(', ') || 'arthritis treatment and medical innovation';
   }
 
   generateDemoSummary(articles) {

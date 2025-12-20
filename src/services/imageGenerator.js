@@ -1,35 +1,47 @@
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import fs from 'fs/promises';
 import path from 'path';
 
 export class ImageGenerator {
   constructor(config) {
     this.config = config;
-    this.openai = config.openai.apiKey ? new OpenAI({ apiKey: config.openai.apiKey }) : null;
+    this.anthropic = config.anthropic.apiKey ? new Anthropic({ apiKey: config.anthropic.apiKey }) : null;
+
+    // Настройка axios для работы с прокси
+    this.axiosConfig = {
+      timeout: 60000,
+      responseType: 'arraybuffer'
+    };
+
+    if (process.env.HTTPS_PROXY || process.env.https_proxy) {
+      const proxyUrl = process.env.HTTPS_PROXY || process.env.https_proxy;
+      this.axiosConfig.httpsAgent = new HttpsProxyAgent(proxyUrl);
+    }
   }
 
   async generateImage(prompt) {
-    if (!this.openai) {
-      console.warn('⚠️ OpenAI API ключ не настроен, пропускаю генерацию изображения');
-      return null;
-    }
-
-    console.log('🎨 Генерирую изображение...');
+    console.log('🎨 Генерирую изображение через Claude + Pollinations AI...');
 
     try {
-      const response = await this.openai.images.generate({
-        model: this.config.openai.imageModel,
-        prompt: this.enhancePrompt(prompt),
-        n: 1,
-        size: '1792x1024',
-        quality: 'hd',
-        style: 'natural'
-      });
+      // Шаг 1: Используем Claude для создания детального промпта
+      let enhancedPrompt;
+      if (this.anthropic) {
+        enhancedPrompt = await this.generatePromptWithClaude(prompt);
+      } else {
+        enhancedPrompt = this.enhancePromptSimple(prompt);
+      }
 
-      const imageUrl = response.data[0].url;
-      console.log('✅ Изображение сгенерировано:', imageUrl);
+      console.log('✅ Промпт создан через Claude');
+      console.log(`📝 Промпт: ${enhancedPrompt.substring(0, 100)}...`);
 
+      // Шаг 2: Генерируем изображение через бесплатный API Pollinations
+      const imageUrl = await this.generateWithPollinations(enhancedPrompt);
+
+      console.log('✅ Изображение сгенерировано');
+
+      // Шаг 3: Скачиваем изображение
       const imagePath = await this.downloadImage(imageUrl);
 
       return {
@@ -37,22 +49,60 @@ export class ImageGenerator {
         path: imagePath
       };
     } catch (error) {
-      console.error('Ошибка при генерации изображения:', error.message);
+      console.error('⚠️ Ошибка при генерации изображения:', error.message);
       return null;
     }
   }
 
-  enhancePrompt(prompt) {
-    const enhancedPrompt = `Professional medical infographic: ${prompt}.
+  async generatePromptWithClaude(basicPrompt) {
+    try {
+      const message = await this.anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 300,
+        messages: [{
+          role: 'user',
+          content: `Создай детальный английский промпт для генерации медицинского изображения на основе этой темы: "${basicPrompt}"
 
-Style: Clean, modern, scientific illustration with a professional healthcare aesthetic.
-Colors: Predominantly blue and white color scheme with subtle gradients.
-Elements: Abstract medical imagery - molecules, cells, DNA strands, medical crosses, technology interfaces.
-Composition: Horizontal layout suitable for social media posts.
-Quality: High-resolution, magazine-quality illustration.
-Avoid: Photos of real people, disturbing imagery, text overlays.`;
+Требования к промпту:
+- Только на английском языке
+- Профессиональный медицинский стиль
+- Современная научная инфографика
+- Цвета: синий, белый, светло-голубой градиент
+- Элементы: молекулы, клетки, медицинские символы, технологии
+- Горизонтальная композиция для соцсетей
+- БЕЗ текста, БЕЗ людей, БЕЗ реалистичных фото
 
-    return enhancedPrompt;
+Ответь ТОЛЬКО промптом, без пояснений.`
+        }]
+      });
+
+      return message.content[0].text.trim();
+    } catch (error) {
+      console.log('⚠️ Claude API недоступен, использую простой промпт');
+      return this.enhancePromptSimple(basicPrompt);
+    }
+  }
+
+  enhancePromptSimple(prompt) {
+    return `Professional medical infographic about ${prompt}. Modern scientific illustration with blue and white gradient. Abstract medical imagery with molecules, cells, DNA strands, medical crosses, and technology interfaces. Horizontal layout, high-resolution, magazine-quality. No text, no people, no photos.`;
+  }
+
+  async generateWithPollinations(prompt) {
+    try {
+      // Pollinations.ai - бесплатный API для генерации изображений
+      // Поддерживает Stable Diffusion
+      const encodedPrompt = encodeURIComponent(prompt);
+
+      // Используем их публичный API
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1792&height=1024&model=flux&nologo=true&enhance=true`;
+
+      console.log('🔗 URL изображения:', imageUrl);
+
+      return imageUrl;
+    } catch (error) {
+      console.error('Ошибка Pollinations API:', error.message);
+      throw error;
+    }
   }
 
   async downloadImage(url) {
@@ -61,12 +111,11 @@ Avoid: Photos of real people, disturbing imagery, text overlays.`;
       await fs.mkdir(imagesDir, { recursive: true });
 
       const timestamp = Date.now();
-      const imagePath = path.join(imagesDir, `arthritis_${timestamp}.png`);
+      const imagePath = path.join(imagesDir, `medical_${timestamp}.png`);
 
-      const response = await axios.get(url, {
-        responseType: 'arraybuffer',
-        timeout: 30000
-      });
+      console.log('⬇️ Скачиваю изображение...');
+
+      const response = await axios.get(url, this.axiosConfig);
 
       await fs.writeFile(imagePath, response.data);
 
@@ -74,12 +123,15 @@ Avoid: Photos of real people, disturbing imagery, text overlays.`;
       return imagePath;
     } catch (error) {
       console.error('Ошибка при загрузке изображения:', error.message);
-      throw error;
+
+      // Если не удалось скачать, возвращаем URL для прямого использования
+      console.log('⚠️ Будет использован прямой URL изображения');
+      return null;
     }
   }
 
   async createFallbackImage() {
-    console.log('📋 Используем резервный вариант (без изображения)');
+    console.log('📋 Публикация без изображения');
     return null;
   }
 }
