@@ -202,62 +202,62 @@ export class AIBusinessNewsCollector {
       {
         title: 'Новые GPT-4 агенты автоматизируют продажи: рост выручки на 300%',
         description: 'Компании внедряют AI-агентов на базе GPT-4 для автоматизации продаж и поддержки клиентов. Исследование показывает, что бизнесы увеличивают конверсию на 45% и сокращают затраты на обслуживание на 60%. Готовые решения доступны для малого и среднего бизнеса.',
-        url: 'https://techcrunch.com/2025/01/ai-sales-agents',
+        url: 'https://techcrunch.com/tag/artificial-intelligence/',
         source: 'TechCrunch AI',
         category: 'ai-business',
         priority: 10,
-        pubDate: new Date('2025-01-15'),
-        author: 'Sarah Chen'
+        pubDate: new Date(),
+        author: 'TechCrunch'
       },
       {
         title: 'Топ-5 AI инструментов для контент-маркетинга в 2025 году',
         description: 'Обзор лучших AI платформ для создания контента: от генерации текстов до видео. Jasper AI, Copy.ai, и новые решения на базе Claude помогают маркетологам создавать контент в 10 раз быстрее при сохранении качества.',
-        url: 'https://venturebeat.com/ai/content-marketing-tools-2025',
+        url: 'https://venturebeat.com/ai/',
         source: 'VentureBeat AI',
         category: 'ai-business',
         priority: 9,
-        pubDate: new Date('2025-01-12'),
-        author: 'Michael Rodriguez'
+        pubDate: new Date(),
+        author: 'VentureBeat'
       },
       {
         title: 'Обучение ChatGPT для вашего бизнеса: пошаговый гайд',
         description: 'Как создать кастомного чат-бота на базе ChatGPT за 3 дня без программирования. Детальное руководство по fine-tuning, интеграции с CRM и автоматизации бизнес-процессов. Реальные кейсы и примеры промптов.',
-        url: 'https://towardsdatascience.com/chatgpt-business-training',
+        url: 'https://towardsdatascience.com/',
         source: 'Towards Data Science',
         category: 'ai-education',
         priority: 8,
-        pubDate: new Date('2025-01-10'),
-        author: 'Dr. Alex Kumar'
+        pubDate: new Date(),
+        author: 'Towards Data Science'
       },
       {
         title: 'AI-агенты заменяют целые отделы: кейс российского стартапа',
         description: 'Российская компания разработала AI-агента, который полностью автоматизировал работу отдела продаж из 12 человек. ROI достигнут за 2 месяца. Решение доступно для внедрения в любом бизнесе.',
-        url: 'https://vc.ru/ai/ai-agent-replaces-sales-team',
+        url: 'https://vc.ru/tag/ai',
         source: 'VC.ru',
         category: 'ai-business',
         priority: 10,
-        pubDate: new Date('2025-01-08'),
-        author: 'Иван Петров'
+        pubDate: new Date(),
+        author: 'VC.ru'
       },
       {
         title: 'Рынок готовых AI-решений вырос на 450% за год',
         description: 'Аналитики прогнозируют, что к концу 2025 года 70% компаний будут использовать готовые AI-решения. Наибольший спрос на чат-боты для клиентской поддержки, AI для контент-маркетинга и автоматизации рутинных задач.',
-        url: 'https://aibusiness.com/market-growth-2025',
+        url: 'https://aibusiness.com/',
         source: 'AI Business',
         category: 'ai-business',
         priority: 9,
-        pubDate: new Date('2025-01-05'),
-        author: 'Emily Watson'
+        pubDate: new Date(),
+        author: 'AI Business'
       },
       {
         title: 'Midjourney и DALL-E 3 для бизнеса: практические кейсы',
         description: 'Как компании используют AI для генерации визуального контента: от соцсетей до презентаций. Подробные инструкции, промпты и примеры интеграции с рабочими процессами. Экономия на дизайнерах до 80%.',
-        url: 'https://www.theverge.com/ai-visual-content-business',
+        url: 'https://www.theverge.com/ai-artificial-intelligence',
         source: 'The Verge AI',
         category: 'ai-business',
         priority: 8,
-        pubDate: new Date('2025-01-03'),
-        author: 'David Park'
+        pubDate: new Date(),
+        author: 'The Verge'
       }
     ];
   }

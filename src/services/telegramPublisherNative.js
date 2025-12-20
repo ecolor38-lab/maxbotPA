@@ -14,10 +14,14 @@ export class TelegramPublisherNative {
     this.apiUrl = `https://api.telegram.org/bot${this.botToken}`;
   }
 
-  async publish(postText, hashtags, imagePath = null, articles = []) {
+  async publish(postText, hashtags, imageData = null, articles = []) {
     const fullText = this.formatPostWithSources(postText, hashtags, articles);
 
-    await this.saveToFile(fullText, imagePath);
+    // imageData может быть строкой (путь/URL) или объектом {url, path}
+    const imagePath = typeof imageData === 'object' ? imageData?.path : imageData;
+    const imageUrl = typeof imageData === 'object' ? imageData?.url : null;
+
+    await this.saveToFile(fullText, imagePath || imageUrl);
 
     if (!this.channelId) {
       console.log('⚠️ TELEGRAM_CHANNEL_ID не указан - пост сохранен в файл, но не опубликован');
@@ -30,8 +34,13 @@ export class TelegramPublisherNative {
     try {
       let postData;
 
+      // Приоритет: файл > URL > только текст
       if (imagePath && await this.fileExists(imagePath)) {
+        console.log('📸 Отправляю изображение из файла...');
         postData = await this.publishWithImage(fullText, imagePath);
+      } else if (imageUrl) {
+        console.log('📸 Отправляю изображение по URL...');
+        postData = await this.publishWithImageUrl(fullText, imageUrl);
       } else {
         postData = await this.publishTextOnly(fullText);
       }
@@ -101,6 +110,30 @@ export class TelegramPublisherNative {
       return this.makeFormRequest('/sendPhoto', formData);
     } catch (error) {
       console.error('Ошибка при публикации с изображением в Telegram:', error.message);
+      console.log('Пытаюсь опубликовать только текст...');
+      return await this.publishTextOnly(text);
+    }
+  }
+
+  async publishWithImageUrl(text, imageUrl) {
+    try {
+      const data = JSON.stringify({
+        chat_id: this.channelId,
+        photo: imageUrl,
+        caption: text,
+        parse_mode: 'Markdown'
+      });
+
+      return this.makeRequest('/sendPhoto', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data)
+        },
+        body: data
+      });
+    } catch (error) {
+      console.error('Ошибка при публикации с изображением по URL:', error.message);
       console.log('Пытаюсь опубликовать только текст...');
       return await this.publishTextOnly(text);
     }
