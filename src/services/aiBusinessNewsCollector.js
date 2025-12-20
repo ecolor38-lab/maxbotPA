@@ -34,6 +34,109 @@ export class AIBusinessNewsCollector {
     return {
       // RSS feeds AI и технологических новостей
       rss: [
+        // === ОФИЦИАЛЬНЫЕ БЛОГИ AI КОМПАНИЙ ===
+        {
+          name: 'OpenAI Blog',
+          url: 'https://openai.com/blog/rss.xml',
+          category: 'ai-llm',
+          priority: 10
+        },
+        {
+          name: 'Anthropic News',
+          url: 'https://www.anthropic.com/news/rss.xml',
+          category: 'ai-llm',
+          priority: 10
+        },
+        {
+          name: 'Google AI Blog',
+          url: 'https://blog.google/technology/ai/rss/',
+          category: 'ai-research',
+          priority: 10
+        },
+        {
+          name: 'DeepMind Blog',
+          url: 'https://www.deepmind.com/blog/rss.xml',
+          category: 'ai-research',
+          priority: 9
+        },
+        {
+          name: 'Meta AI Blog',
+          url: 'https://ai.meta.com/blog/rss/',
+          category: 'ai-research',
+          priority: 9
+        },
+        {
+          name: 'Microsoft AI Blog',
+          url: 'https://blogs.microsoft.com/ai/feed/',
+          category: 'ai-enterprise',
+          priority: 9
+        },
+        {
+          name: 'Hugging Face Blog',
+          url: 'https://huggingface.co/blog/feed.xml',
+          category: 'ai-tools',
+          priority: 8
+        },
+        {
+          name: 'Stability AI Blog',
+          url: 'https://stability.ai/blog/rss.xml',
+          category: 'ai-generative',
+          priority: 8
+        },
+
+        // === КОРПОРАТИВНЫЕ AI БЛОГИ ===
+        {
+          name: 'AWS Machine Learning',
+          url: 'https://aws.amazon.com/blogs/machine-learning/feed/',
+          category: 'ai-cloud',
+          priority: 8
+        },
+        {
+          name: 'Google Cloud AI',
+          url: 'https://cloud.google.com/blog/products/ai-machine-learning/rss',
+          category: 'ai-cloud',
+          priority: 8
+        },
+        {
+          name: 'Microsoft Azure AI',
+          url: 'https://azure.microsoft.com/en-us/blog/topics/artificial-intelligence/feed/',
+          category: 'ai-cloud',
+          priority: 8
+        },
+        {
+          name: 'NVIDIA AI Blog',
+          url: 'https://blogs.nvidia.com/blog/category/deep-learning/feed/',
+          category: 'ai-hardware',
+          priority: 8
+        },
+
+        // === НАУЧНЫЕ И ОБРАЗОВАТЕЛЬНЫЕ ===
+        {
+          name: 'MIT Technology Review AI',
+          url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed',
+          category: 'ai-research',
+          priority: 9
+        },
+        {
+          name: 'Papers With Code',
+          url: 'https://paperswithcode.com/latest/rss.xml',
+          category: 'ai-research',
+          priority: 7
+        },
+        {
+          name: 'Towards Data Science',
+          url: 'https://towardsdatascience.com/feed',
+          category: 'ai-education',
+          priority: 7
+        },
+        {
+          name: 'The Batch (deeplearning.ai)',
+          url: 'https://www.deeplearning.ai/the-batch/feed/',
+          category: 'ai-education',
+          priority: 8
+        },
+
+        // === НОВОСТНЫЕ AI ИСТОЧНИКИ ===
         {
           name: 'TechCrunch AI',
           url: 'https://techcrunch.com/tag/artificial-intelligence/feed/',
@@ -44,12 +147,6 @@ export class AIBusinessNewsCollector {
           name: 'VentureBeat AI',
           url: 'https://venturebeat.com/category/ai/feed/',
           category: 'ai-business',
-          priority: 9
-        },
-        {
-          name: 'MIT Technology Review AI',
-          url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed',
-          category: 'ai-research',
           priority: 9
         },
         {
@@ -65,10 +162,36 @@ export class AIBusinessNewsCollector {
           priority: 10
         },
         {
-          name: 'Towards Data Science',
-          url: 'https://towardsdatascience.com/feed',
-          category: 'ai-education',
+          name: 'AI News',
+          url: 'https://artificialintelligence-news.com/feed/',
+          category: 'ai-news',
           priority: 7
+        },
+        {
+          name: 'SyncedReview',
+          url: 'https://syncedreview.com/feed/',
+          category: 'ai-news',
+          priority: 7
+        },
+
+        // === СПЕЦИАЛИЗИРОВАННЫЕ AI ИНСТРУМЕНТЫ ===
+        {
+          name: 'LangChain Blog',
+          url: 'https://blog.langchain.dev/rss/',
+          category: 'ai-tools',
+          priority: 7
+        },
+        {
+          name: 'Cohere AI Blog',
+          url: 'https://cohere.com/blog/rss.xml',
+          category: 'ai-llm',
+          priority: 7
+        },
+        {
+          name: 'Replicate Blog',
+          url: 'https://replicate.com/blog/rss.xml',
+          category: 'ai-tools',
+          priority: 6
         }
       ]
     };
@@ -79,24 +202,43 @@ export class AIBusinessNewsCollector {
 
     const sources = this.getSources();
     const allArticles = [];
+    let successfulSources = 0;
+    let failedSources = 0;
 
     // Собираем из RSS фидов
     for (const source of sources.rss) {
       try {
         console.log(`📡 Парсинг: ${source.name}...`);
         const articles = await this.parseRSSFeed(source);
-        allArticles.push(...articles);
-        console.log(`   ✓ Найдено статей: ${articles.length}`);
+
+        if (articles && articles.length > 0) {
+          allArticles.push(...articles);
+          successfulSources++;
+          console.log(`   ✓ Найдено статей: ${articles.length}`);
+        } else {
+          console.log(`   ⚠️ Источник пуст, переход к следующему`);
+        }
       } catch (error) {
+        failedSources++;
         console.log(`   ✗ Ошибка: ${error.message}`);
+        console.log(`   → Продолжаю со следующим источником...`);
+        // Продолжаем работу с другими источниками
+        continue;
       }
     }
+
+    console.log(`\n📊 Обработано источников: ${successfulSources} успешно, ${failedSources} с ошибками`);
 
     // Фильтруем и сортируем
     const filteredArticles = this.filterArticles(allArticles);
     const sortedArticles = this.sortByRelevance(filteredArticles);
 
-    console.log(`\n✅ Всего найдено релевантных статей: ${sortedArticles.length}`);
+    console.log(`✅ Всего найдено релевантных статей: ${sortedArticles.length}`);
+
+    if (sortedArticles.length === 0) {
+      console.log('⚠️ Ни один источник не вернул статьи, используем демо-статьи');
+      return [];
+    }
 
     // Берем больше статей для анализа (maxNewsItems или 20)
     const candidateArticles = sortedArticles.slice(0, this.config.search.maxNewsItems || 20);
