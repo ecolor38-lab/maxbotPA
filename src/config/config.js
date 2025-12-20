@@ -13,7 +13,7 @@ export const config = {
   },
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY,
-    model: 'claude-3-5-sonnet-20241022'
+    model: 'claude-3-5-sonnet-20240620'
   },
   scheduler: {
     cronSchedule: process.env.CRON_SCHEDULE || '0 9 * * *'

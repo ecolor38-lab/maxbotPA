@@ -57,7 +57,7 @@ export class ImageGenerator {
   async generatePromptWithClaude(basicPrompt) {
     try {
       const message = await this.anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: 'claude-3-5-sonnet-20240620',
         max_tokens: 300,
         messages: [{
           role: 'user',
@@ -111,7 +111,7 @@ export class ImageGenerator {
       await fs.mkdir(imagesDir, { recursive: true });
 
       const timestamp = Date.now();
-      const imagePath = path.join(imagesDir, `medical_${timestamp}.png`);
+      const imagePath = path.join(imagesDir, `ai_business_${timestamp}.png`);
 
       console.log('⬇️ Скачиваю изображение...');
 
