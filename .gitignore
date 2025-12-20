@@ -6,3 +6,6 @@ logs/
 data/
 temp/
 images/
+posts/
+content-plan.json
+published-posts.json
