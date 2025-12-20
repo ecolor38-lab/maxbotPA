@@ -3,51 +3,51 @@ export class HashtagGenerator {
     this.config = config;
     this.baseHashtags = {
       ru: [
-        '#ПсориатическийАртрит',
-        '#Артрит',
-        '#Медицина',
-        '#Здоровье',
-        '#МедицинскиеНовости',
-        '#Ревматология',
-        '#Иммунология',
-        '#ЗдоровыйОбразЖизни'
+        '#AIдляБизнеса',
+        '#ИИ',
+        '#ИскусственныйИнтеллект',
+        '#Автоматизация',
+        '#ЧатБот',
+        '#НейроБизнес',
+        '#БизнесАвтоматизация',
+        '#ГотовыеРешения'
       ],
       en: [
-        '#PsoriaticArthritis',
-        '#Arthritis',
-        '#Medicine',
-        '#Health',
-        '#MedicalNews',
-        '#Rheumatology',
-        '#Immunology',
-        '#Healthcare'
+        '#AIforBusiness',
+        '#ArtificialIntelligence',
+        '#AI',
+        '#Automation',
+        '#Chatbot',
+        '#BusinessAI',
+        '#DigitalTransformation',
+        '#AITools'
       ]
     };
 
     this.topicalHashtags = {
       ru: [
-        '#БиологическиеПрепараты',
-        '#НовыеЛекарства',
-        '#КлиническиеИсследования',
-        '#ИскусственныйИнтеллект',
-        '#ИИвМедицине',
-        '#ПерсонализированнаяМедицина',
-        '#Инновации',
-        '#МедТех',
-        '#ТаргетнаяТерапия',
-        '#ГенетическиеИсследования'
+        '#GPT4',
+        '#ChatGPT',
+        '#Claude',
+        '#Нейросети',
+        '#КонтентМаркетинг',
+        '#AIАгент',
+        '#МашинноеОбучение',
+        '#ЦифровизацияБизнеса',
+        '#Стартап',
+        '#ИнновацииВБизнесе'
       ],
       en: [
-        '#BiologicDrugs',
-        '#NewDrugs',
-        '#ClinicalTrials',
-        '#ArtificialIntelligence',
-        '#AIinHealthcare',
-        '#PersonalizedMedicine',
-        '#Innovation',
-        '#MedTech',
-        '#TargetedTherapy',
-        '#GeneticResearch'
+        '#GPT4',
+        '#ChatGPT',
+        '#Claude',
+        '#MachineLearning',
+        '#ContentMarketing',
+        '#AIAgent',
+        '#DeepLearning',
+        '#Startup',
+        '#TechInnovation',
+        '#AIRevolution'
       ]
     };
   }
@@ -81,24 +81,23 @@ export class HashtagGenerator {
     const relevant = [];
 
     const keywords = {
-      'биологическ': ['#БиологическиеПрепараты', '#BiologicDrugs'],
-      'biologic': ['#БиологическиеПрепараты', '#BiologicDrugs'],
-      'лекарств': ['#НовыеЛекарства', '#NewDrugs'],
-      'drug': ['#НовыеЛекарства', '#NewDrugs'],
-      'medication': ['#НовыеЛекарства', '#NewDrugs'],
-      'исследован': ['#КлиническиеИсследования', '#ClinicalTrials'],
-      'research': ['#КлиническиеИсследования', '#ClinicalTrials'],
-      'trial': ['#КлиническиеИсследования', '#ClinicalTrials'],
-      'ии': ['#ИИвМедицине', '#AIinHealthcare'],
-      'ai': ['#ИскусственныйИнтеллект', '#ArtificialIntelligence'],
-      'artificial intelligence': ['#ИскусственныйИнтеллект', '#ArtificialIntelligence'],
-      'machine learning': ['#ИИвМедицине', '#AIinHealthcare'],
-      'персонализ': ['#ПерсонализированнаяМедицина', '#PersonalizedMedicine'],
-      'personalized': ['#ПерсонализированнаяМедицина', '#PersonalizedMedicine'],
-      'ген': ['#ГенетическиеИсследования', '#GeneticResearch'],
-      'genetic': ['#ГенетическиеИсследования', '#GeneticResearch'],
-      'таргет': ['#ТаргетнаяТерапия', '#TargetedTherapy'],
-      'targeted': ['#ТаргетнаяТерапия', '#TargetedTherapy']
+      'gpt': ['#GPT4', '#GPT4'],
+      'chatgpt': ['#ChatGPT', '#ChatGPT'],
+      'claude': ['#Claude', '#Claude'],
+      'чат-бот': ['#ЧатБот', '#Chatbot'],
+      'chatbot': ['#ЧатБот', '#Chatbot'],
+      'нейросет': ['#Нейросети', '#MachineLearning'],
+      'neural': ['#Нейросети', '#MachineLearning'],
+      'контент': ['#КонтентМаркетинг', '#ContentMarketing'],
+      'content': ['#КонтентМаркетинг', '#ContentMarketing'],
+      'агент': ['#AIАгент', '#AIAgent'],
+      'agent': ['#AIАгент', '#AIAgent'],
+      'машинное обучение': ['#МашинноеОбучение', '#MachineLearning'],
+      'machine learning': ['#МашинноеОбучение', '#MachineLearning'],
+      'автоматизац': ['#БизнесАвтоматизация', '#Automation'],
+      'automation': ['#БизнесАвтоматизация', '#Automation'],
+      'стартап': ['#Стартап', '#Startup'],
+      'startup': ['#Стартап', '#Startup']
     };
 
     for (const [keyword, tags] of Object.entries(keywords)) {
@@ -123,11 +122,11 @@ export class HashtagGenerator {
     const trending = [];
 
     if (lang === 'ru') {
-      trending.push('#Медицина2025');
-      trending.push('#ЗдоровьеБудущего');
+      trending.push('#ИИ2025');
+      trending.push('#БизнесБудущего');
     } else {
-      trending.push('#Medicine2025');
-      trending.push('#FutureOfHealthcare');
+      trending.push('#AI2025');
+      trending.push('#FutureOfBusiness');
     }
 
     return trending;

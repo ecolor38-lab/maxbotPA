@@ -1,13 +1,13 @@
 import { config } from './config/config.js';
-import { ScientificNewsCollector } from './services/scientificNewsCollector.js';
+import { AIBusinessNewsCollector } from './services/aiBusinessNewsCollector.js';
 import { AISummarizer } from './services/aiSummarizer.js';
 import { ImageGenerator } from './services/imageGenerator.js';
 import { HashtagGenerator } from './services/hashtagGenerator.js';
 import { TelegramPublisherNative } from './services/telegramPublisherNative.js';
 
-export class ArthritisInfoBot {
+export class AIBusinessBot {
   constructor() {
-    this.newsCollector = new ScientificNewsCollector(config);
+    this.newsCollector = new AIBusinessNewsCollector(config);
     this.aiSummarizer = new AISummarizer(config);
     this.imageGenerator = new ImageGenerator(config);
     this.hashtagGenerator = new HashtagGenerator(config);
@@ -15,7 +15,7 @@ export class ArthritisInfoBot {
   }
 
   async run() {
-    console.log('🚀 Запуск бота для сбора медицинских новостей...\n');
+    console.log('🚀 Запуск AI бизнес бота для сбора новостей...\n');
 
     try {
       const connectionOk = await this.telegramPublisher.testConnection();
@@ -143,7 +143,7 @@ export class ArthritisInfoBot {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const bot = new ArthritisInfoBot();
+  const bot = new AIBusinessBot();
   bot.run()
     .then(() => {
       console.log('\n👋 Завершение работы бота');

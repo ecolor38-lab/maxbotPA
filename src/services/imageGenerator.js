@@ -61,14 +61,14 @@ export class ImageGenerator {
         max_tokens: 300,
         messages: [{
           role: 'user',
-          content: `Создай детальный английский промпт для генерации медицинского изображения на основе этой темы: "${basicPrompt}"
+          content: `Создай детальный английский промпт для генерации AI бизнес изображения на основе этой темы: "${basicPrompt}"
 
 Требования к промпту:
 - Только на английском языке
-- Профессиональный медицинский стиль
-- Современная научная инфографика
-- Цвета: синий, белый, светло-голубой градиент
-- Элементы: молекулы, клетки, медицинские символы, технологии
+- Современный технологический бизнес стиль
+- Профессиональная AI инфографика
+- Цвета: синий, фиолетовый, белый градиент
+- Элементы: нейросети, AI роботы, чат-боты, автоматизация, технологии, цифровые элементы
 - Горизонтальная композиция для соцсетей
 - БЕЗ текста, БЕЗ людей, БЕЗ реалистичных фото
 
@@ -84,7 +84,7 @@ export class ImageGenerator {
   }
 
   enhancePromptSimple(prompt) {
-    return `Professional medical infographic about ${prompt}. Modern scientific illustration with blue and white gradient. Abstract medical imagery with molecules, cells, DNA strands, medical crosses, and technology interfaces. Horizontal layout, high-resolution, magazine-quality. No text, no people, no photos.`;
+    return `Professional AI business infographic about ${prompt}. Modern tech illustration with blue and purple gradient. Abstract AI imagery with neural networks, chatbot icons, automation symbols, AI robots, digital circuits, and technology interfaces. Horizontal layout, high-resolution, magazine-quality. No text, no people, no photos.`;
   }
 
   async generateWithPollinations(prompt) {

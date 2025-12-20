@@ -6,11 +6,6 @@ export const config = {
     botToken: process.env.TELEGRAM_BOT_TOKEN,
     channelId: process.env.TELEGRAM_CHANNEL_ID || null
   },
-  maxbot: {
-    apiToken: process.env.MAXBOT_API_TOKEN,
-    apiUrl: 'https://platform-api.max.ru',
-    chatId: process.env.CHAT_ID || null
-  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
     model: 'gpt-4-turbo-preview',
@@ -29,12 +24,12 @@ export const config = {
   },
   language: process.env.LANGUAGE || 'ru',
   topics: [
-    'псориатический артрит',
-    'psoriatic arthritis',
-    'псориатический артрит лечение',
-    'psoriatic arthritis treatment',
-    'биологические препараты псориатический артрит',
-    'AI в медицине артрит',
-    'новые лекарства от артрита'
+    'ai business solutions',
+    'готовые чат-боты',
+    'ai автоматизация бизнеса',
+    'ai для контент-маркетинга',
+    'chatbot для продаж',
+    'нейросети для бизнеса',
+    'ai агенты'
   ]
 };

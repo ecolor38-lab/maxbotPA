@@ -1,11 +1,11 @@
 import cron from 'node-cron';
 import { config } from './config/config.js';
-import { ArthritisInfoBot } from './index.js';
+import { AIBusinessBot } from './index.js';
 import { ContentPlanner } from './services/contentPlanner.js';
 
 class BotScheduler {
   constructor() {
-    this.bot = new ArthritisInfoBot();
+    this.bot = new AIBusinessBot();
     this.contentPlanner = new ContentPlanner();
     this.schedules = this.getSchedules();
   }
