@@ -17,9 +17,9 @@ export class ContentPlanner {
         queue: [],
         lastUpdated: new Date().toISOString(),
         settings: {
-          postsPerDay: 3,
-          minArticlesPerPost: 3,
-          maxArticlesPerPost: 6
+          postsPerDay: 1,  // 1 новость = 1 пост (публикация каждые 3 часа)
+          minArticlesPerPost: 1,
+          maxArticlesPerPost: 1
         }
       };
     }
@@ -81,29 +81,20 @@ export class ContentPlanner {
 
   createPosts(articles, settings) {
     const posts = [];
-    const postsPerDay = settings.postsPerDay || 3;
 
-    // Разделяем статьи на равные части для 3 постов в день
-    const articlesPerPost = Math.ceil(articles.length / postsPerDay);
+    // Новая логика: 1 новость = 1 пост
+    console.log(`📋 Создаю ${articles.length} постов из ${articles.length} новостей (1 новость = 1 пост)`);
 
-    console.log(`📋 Создаю ${postsPerDay} поста из ${articles.length} новостей (по ${articlesPerPost} в каждом)`);
-
-    for (let i = 0; i < postsPerDay; i++) {
-      const start = i * articlesPerPost;
-      const end = Math.min(start + articlesPerPost, articles.length);
-      const batch = articles.slice(start, end);
-
-      if (batch.length > 0) {
-        posts.push({
-          id: Date.now() + i,
-          articles: batch,
-          scheduledFor: null,
-          status: 'pending',
-          createdAt: new Date().toISOString()
-        });
-        console.log(`   Пост ${i + 1}: ${batch.length} новостей`);
-      }
-    }
+    articles.forEach((article, index) => {
+      posts.push({
+        id: Date.now() + index,
+        articles: [article],  // Один пост содержит одну новость
+        scheduledFor: null,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+      console.log(`   Пост ${index + 1}: "${article.title.substring(0, 60)}..."`);
+    });
 
     return posts;
   }

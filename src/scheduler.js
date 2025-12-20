@@ -11,17 +11,17 @@ class BotScheduler {
   }
 
   getSchedules() {
-    // Поддержка 3 расписаний в день из .env
+    // Поддержка расписаний из .env
     const schedules = [];
 
     if (process.env.CRON_SCHEDULE_1) {
-      schedules.push({ time: process.env.CRON_SCHEDULE_1, name: 'Утренний пост (9:00)' });
+      schedules.push({ time: process.env.CRON_SCHEDULE_1, name: 'Пост каждые 3 часа' });
     }
     if (process.env.CRON_SCHEDULE_2) {
-      schedules.push({ time: process.env.CRON_SCHEDULE_2, name: 'Дневной пост (14:00)' });
+      schedules.push({ time: process.env.CRON_SCHEDULE_2, name: 'Дополнительный пост' });
     }
     if (process.env.CRON_SCHEDULE_3) {
-      schedules.push({ time: process.env.CRON_SCHEDULE_3, name: 'Вечерний пост (19:00)' });
+      schedules.push({ time: process.env.CRON_SCHEDULE_3, name: 'Дополнительный пост' });
     }
 
     // Fallback на старое расписание
@@ -29,9 +29,9 @@ class BotScheduler {
       schedules.push({ time: config.scheduler.cronSchedule, name: 'Ежедневный пост' });
     }
 
-    // Дефолт если ничего не задано
+    // Дефолт: каждые 3 часа
     if (schedules.length === 0) {
-      schedules.push({ time: '0 9 * * *', name: 'Ежедневный пост (9:00)' });
+      schedules.push({ time: '0 */3 * * *', name: 'Пост каждые 3 часа' });
     }
 
     return schedules;
@@ -162,13 +162,13 @@ class BotScheduler {
   }
 
   scheduleNewsCollection() {
-    // Собираем новости каждые 12 часов
-    cron.schedule('0 */12 * * *', async () => {
+    // Собираем новости каждые 3 часа
+    cron.schedule('0 */3 * * *', async () => {
       console.log('\n🔄 Автоматический сбор новостей...\n');
       await this.collectAndPlan();
     });
 
-    console.log('✅ Автоматический сбор новостей настроен (каждые 12 часов)\n');
+    console.log('✅ Автоматический сбор новостей настроен (каждые 3 часа)\n');
   }
 
   async showPlanStats() {
