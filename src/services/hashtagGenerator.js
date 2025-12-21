@@ -1,0 +1,134 @@
+export class HashtagGenerator {
+  constructor(config) {
+    this.config = config;
+    this.baseHashtags = {
+      ru: [
+        '#AIдляБизнеса',
+        '#ИИ',
+        '#ИскусственныйИнтеллект',
+        '#Автоматизация',
+        '#ЧатБот',
+        '#НейроБизнес',
+        '#БизнесАвтоматизация',
+        '#ГотовыеРешения'
+      ],
+      en: [
+        '#AIforBusiness',
+        '#ArtificialIntelligence',
+        '#AI',
+        '#Automation',
+        '#Chatbot',
+        '#BusinessAI',
+        '#DigitalTransformation',
+        '#AITools'
+      ]
+    };
+
+    this.topicalHashtags = {
+      ru: [
+        '#GPT4',
+        '#ChatGPT',
+        '#Claude',
+        '#Нейросети',
+        '#КонтентМаркетинг',
+        '#AIАгент',
+        '#МашинноеОбучение',
+        '#ЦифровизацияБизнеса',
+        '#Стартап',
+        '#ИнновацииВБизнесе'
+      ],
+      en: [
+        '#GPT4',
+        '#ChatGPT',
+        '#Claude',
+        '#MachineLearning',
+        '#ContentMarketing',
+        '#AIAgent',
+        '#DeepLearning',
+        '#Startup',
+        '#TechInnovation',
+        '#AIRevolution'
+      ]
+    };
+  }
+
+  generateHashtags(postText, articles) {
+    console.log('🏷️ Генерирую хештеги...');
+
+    const lang = this.config.language;
+    const hashtags = new Set();
+
+    const baseCount = 4;
+    const selectedBase = this.baseHashtags[lang].slice(0, baseCount);
+    selectedBase.forEach(tag => hashtags.add(tag));
+
+    const topicalCount = 3;
+    const relevantTopical = this.selectRelevantTopicalHashtags(postText, articles, lang);
+    relevantTopical.slice(0, topicalCount).forEach(tag => hashtags.add(tag));
+
+    const trending = this.addTrendingHashtags(lang);
+    trending.forEach(tag => hashtags.add(tag));
+
+    const finalHashtags = Array.from(hashtags).slice(0, 10);
+
+    console.log(`✅ Сгенерировано ${finalHashtags.length} хештегов`);
+
+    return finalHashtags.join(' ');
+  }
+
+  selectRelevantTopicalHashtags(postText, articles, lang) {
+    const text = postText.toLowerCase();
+    const relevant = [];
+
+    const keywords = {
+      'gpt': ['#GPT4', '#GPT4'],
+      'chatgpt': ['#ChatGPT', '#ChatGPT'],
+      'claude': ['#Claude', '#Claude'],
+      'чат-бот': ['#ЧатБот', '#Chatbot'],
+      'chatbot': ['#ЧатБот', '#Chatbot'],
+      'нейросет': ['#Нейросети', '#MachineLearning'],
+      'neural': ['#Нейросети', '#MachineLearning'],
+      'контент': ['#КонтентМаркетинг', '#ContentMarketing'],
+      'content': ['#КонтентМаркетинг', '#ContentMarketing'],
+      'агент': ['#AIАгент', '#AIAgent'],
+      'agent': ['#AIАгент', '#AIAgent'],
+      'машинное обучение': ['#МашинноеОбучение', '#MachineLearning'],
+      'machine learning': ['#МашинноеОбучение', '#MachineLearning'],
+      'автоматизац': ['#БизнесАвтоматизация', '#Automation'],
+      'automation': ['#БизнесАвтоматизация', '#Automation'],
+      'стартап': ['#Стартап', '#Startup'],
+      'startup': ['#Стартап', '#Startup']
+    };
+
+    for (const [keyword, tags] of Object.entries(keywords)) {
+      if (text.includes(keyword)) {
+        const tag = lang === 'ru' ? tags[0] : tags[1];
+        if (!relevant.includes(tag)) {
+          relevant.push(tag);
+        }
+      }
+    }
+
+    if (relevant.length < 3) {
+      const fallback = this.topicalHashtags[lang].filter(tag => !relevant.includes(tag));
+      relevant.push(...fallback.slice(0, 3 - relevant.length));
+    }
+
+    return relevant;
+  }
+
+  addTrendingHashtags(lang) {
+    const year = new Date().getFullYear();
+    const trending = [];
+
+    if (lang === 'ru') {
+      trending.push('#ИИ2025');
+      trending.push('#БизнесБудущего');
+    } else {
+      trending.push('#AI2025');
+      trending.push('#FutureOfBusiness');
+    }
+
+    return trending;
+  }
+}

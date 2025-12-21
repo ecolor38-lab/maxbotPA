@@ -1,0 +1,11 @@
+node_modules/
+.env
+.DS_Store
+*.log
+logs/
+data/
+temp/
+images/
+posts/
+content-plan.json
+published-posts.json

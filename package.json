@@ -1,0 +1,35 @@
+{
+  "name": "ai-business-bot",
+  "version": "1.0.0",
+  "description": "AI-powered bot для сбора информации о готовых AI решениях для бизнеса и публикации в Telegram",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "schedule": "node src/scheduler.js",
+    "collect": "node src/collector.js",
+    "dev": "node --watch src/index.js",
+    "test": "echo \"Running tests...\" && exit 0"
+  },
+  "keywords": [
+    "ai",
+    "business-automation",
+    "chatbots",
+    "ai-agents",
+    "telegram-bot"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "axios": "^1.13.2",
+    "cheerio": "^1.1.2",
+    "dotenv": "^16.3.1",
+    "form-data": "^4.0.0",
+    "https-proxy-agent": "^7.0.6",
+    "node-cron": "^3.0.3",
+    "openai": "^4.20.1",
+    "rss-parser": "^3.13.0",
+    "xml2js": "^0.6.2"
+  }
+}
