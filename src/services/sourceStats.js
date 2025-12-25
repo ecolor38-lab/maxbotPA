@@ -28,7 +28,8 @@ export class SourceStats {
       await fs.writeFile(this.statsFile, JSON.stringify(this.stats, null, 2), 'utf8');
       console.log('💾 Статистика источников сохранена');
     } catch (error) {
-      console.error('❌ Ошибка сохранения статистики:', error.message);
+      console.error('⚠️ Не удалось сохранить статистику (только чтение):', error.message);
+      // Игнорируем ошибку - на production может быть read-only FS
     }
   }
 

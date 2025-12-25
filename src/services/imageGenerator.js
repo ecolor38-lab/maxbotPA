@@ -111,7 +111,16 @@ export class ImageGenerator {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const imagesDir = path.join(process.cwd(), 'images');
-        await fs.mkdir(imagesDir, { recursive: true });
+        
+        // Пытаемся создать папку, игнорируем ошибки если нет прав
+        try {
+          await fs.mkdir(imagesDir, { recursive: true });
+        } catch (mkdirError) {
+          // Если папка существует или нет прав - продолжаем
+          if (mkdirError.code !== 'EEXIST' && mkdirError.code !== 'EACCES') {
+            throw mkdirError;
+          }
+        }
 
         const timestamp = Date.now();
         const imagePath = path.join(imagesDir, `ai_business_${timestamp}.png`);
@@ -126,11 +135,26 @@ export class ImageGenerator {
         });
 
         if (response.data && response.data.length > 0) {
-          await fs.writeFile(imagePath, response.data);
-          console.log(`✅ Изображение сохранено: ${imagePath}`);
-          return imagePath;
+          try {
+            await fs.writeFile(imagePath, response.data);
+            console.log(`✅ Изображение сохранено: ${imagePath}`);
+            return imagePath;
+          } catch (writeError) {
+            if (writeError.code === 'EACCES') {
+              console.error(`⚠️ Нет прав на запись в ${imagesDir}`);
+              // На production без прав записи - публикуем без картинки
+              return null;
+            }
+            throw writeError;
+          }
         }
       } catch (error) {
+        // Если проблема с правами - сразу выходим
+        if (error.code === 'EACCES') {
+          console.error(`⚠️ Недостаточно прав для работы с изображениями`);
+          return null;
+        }
+        
         console.error(`❌ Попытка ${attempt} не удалась:`, error.message);
         
         if (attempt < maxRetries) {

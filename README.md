@@ -322,6 +322,7 @@ pm2 startup
 - [SERVER_README.md](./SERVER_README.md) - Быстрый старт с сервером
 - [API_DOCS.md](./API_DOCS.md) - Полная документация REST API
 - [DEPLOY.md](./DEPLOY.md) - Деплой на различные платформы
+- [PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md) - 🚀 Настройка production окружения
 - [SOURCE_LEARNING.md](./SOURCE_LEARNING.md) - 🧠 Система обучения источников
 - [examples/README.md](./examples/README.md) - Примеры использования
 - [FINAL_README.md](./FINAL_README.md) - Оригинальная документация

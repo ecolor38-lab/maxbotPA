@@ -303,7 +303,15 @@ export class TelegramPublisherNative {
   async saveToFile(text, imagePath = null) {
     try {
       const postsDir = path.join(process.cwd(), 'posts');
-      await fs.mkdir(postsDir, { recursive: true });
+      
+      // Пытаемся создать папку, игнорируем ошибки прав доступа
+      try {
+        await fs.mkdir(postsDir, { recursive: true });
+      } catch (mkdirError) {
+        if (mkdirError.code !== 'EEXIST' && mkdirError.code !== 'EACCES') {
+          throw mkdirError;
+        }
+      }
 
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const txtPath = path.join(postsDir, `post_${timestamp}.txt`);
@@ -320,7 +328,13 @@ export class TelegramPublisherNative {
 
       return txtPath;
     } catch (error) {
-      console.error('Ошибка при сохранении в файл:', error.message);
+      if (error.code === 'EACCES') {
+        console.log('⚠️ Нет прав на сохранение файла (только чтение)');
+      } else {
+        console.error('⚠️ Ошибка при сохранении в файл:', error.message);
+      }
+      // Игнорируем ошибку - на production может быть read-only FS
+      return null;
     }
   }
 
