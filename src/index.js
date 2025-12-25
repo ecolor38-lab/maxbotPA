@@ -49,6 +49,12 @@ export class AIBusinessBot {
       console.log(`\n📚 Обработка ${articles.length} статей...\n`);
 
       const postText = await this.aiSummarizer.generateSummary(articles);
+      
+      // Проверяем что постText не пустой
+      if (!postText || postText.trim() === '') {
+        console.error('❌ Не удалось сгенерировать текст поста');
+        return;
+      }
 
       const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
@@ -101,6 +107,13 @@ export class AIBusinessBot {
     console.log(`📚 Генерирую пост из ${articles.length} статей...\n`);
 
     const postText = await this.aiSummarizer.generateSummary(articles);
+    
+    // Проверяем что постText не пустой
+    if (!postText || postText.trim() === '') {
+      console.error('❌ Не удалось сгенерировать текст поста');
+      throw new Error('Failed to generate post text');
+    }
+    
     const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
     // Генерируем изображение

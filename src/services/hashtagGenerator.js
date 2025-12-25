@@ -55,7 +55,15 @@ export class HashtagGenerator {
   generateHashtags(postText, articles) {
     console.log('🏷️ Генерирую хештеги...');
 
-    const lang = this.config.language;
+    // Проверяем и нормализуем язык с fallback на 'ru'
+    let lang = this.config?.language || 'ru';
+    
+    // Убедимся что язык поддерживается
+    if (!this.baseHashtags[lang]) {
+      console.log(`⚠️ Язык "${lang}" не поддерживается, использую "ru"`);
+      lang = 'ru';
+    }
+    
     const hashtags = new Set();
 
     const baseCount = 4;
@@ -77,8 +85,12 @@ export class HashtagGenerator {
   }
 
   selectRelevantTopicalHashtags(postText, articles, lang) {
-    const text = postText.toLowerCase();
+    // Убедимся что postText не undefined
+    const text = (postText || '').toLowerCase();
     const relevant = [];
+    
+    // Нормализуем язык
+    const normalizedLang = this.baseHashtags[lang] ? lang : 'ru';
 
     const keywords = {
       'gpt': ['#GPT4', '#GPT4'],
@@ -102,7 +114,7 @@ export class HashtagGenerator {
 
     for (const [keyword, tags] of Object.entries(keywords)) {
       if (text.includes(keyword)) {
-        const tag = lang === 'ru' ? tags[0] : tags[1];
+        const tag = normalizedLang === 'ru' ? tags[0] : tags[1];
         if (!relevant.includes(tag)) {
           relevant.push(tag);
         }
@@ -110,8 +122,9 @@ export class HashtagGenerator {
     }
 
     if (relevant.length < 3) {
-      const fallback = this.topicalHashtags[lang].filter(tag => !relevant.includes(tag));
-      relevant.push(...fallback.slice(0, 3 - relevant.length));
+      const fallback = this.topicalHashtags[normalizedLang] || this.topicalHashtags['ru'];
+      const filtered = fallback.filter(tag => !relevant.includes(tag));
+      relevant.push(...filtered.slice(0, 3 - relevant.length));
     }
 
     return relevant;
@@ -120,8 +133,11 @@ export class HashtagGenerator {
   addTrendingHashtags(lang) {
     const year = new Date().getFullYear();
     const trending = [];
+    
+    // Нормализуем язык с fallback
+    const normalizedLang = (lang === 'ru' || lang === 'en') ? lang : 'ru';
 
-    if (lang === 'ru') {
+    if (normalizedLang === 'ru') {
       trending.push('#ИИ2025');
       trending.push('#БизнесБудущего');
     } else {
