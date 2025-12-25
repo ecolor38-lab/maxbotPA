@@ -9,3 +9,9 @@ images/
 posts/
 content-plan.json
 published-posts.json
+
+# Временные и отладочные файлы
+fix-env.js
+debug-*.js
+test-*.js
+*-start.js

@@ -140,7 +140,13 @@ export class AIBusinessBot {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Проверка, запущен ли файл напрямую (работает на Windows и Unix)
+const isMainModule = import.meta.url === `file://${process.argv[1]}` || 
+                      import.meta.url.endsWith(process.argv[1]) ||
+                      process.argv[1]?.endsWith('src/index.js') ||
+                      process.argv[1]?.endsWith('src\\index.js');
+
+if (isMainModule) {
   const bot = new AIBusinessBot();
   bot.run()
     .then(() => {
