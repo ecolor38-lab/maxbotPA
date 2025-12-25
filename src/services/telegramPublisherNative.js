@@ -30,39 +30,20 @@ export class TelegramPublisherNative {
     }
 
     console.log('📤 Публикую пост в Telegram...');
+    console.log(`📏 Длина текста: ${fullText.length} символов`);
 
     try {
       let postData;
 
-      // Telegram лимит для caption: 1024 символа
-      const CAPTION_LIMIT = 1024;
-      const hasImage = (imagePath && await this.fileExists(imagePath)) || imageUrl;
-      
-      // Если есть изображение и текст слишком длинный - публикуем раздельно
-      if (hasImage && fullText.length > CAPTION_LIMIT) {
-        console.log(`⚠️ Текст слишком длинный (${fullText.length} символов) для caption, публикую раздельно...`);
-        
-        // Сначала изображение без подписи
-        if (imagePath && await this.fileExists(imagePath)) {
-          console.log('📸 Отправляю изображение...');
-          await this.publishImageOnly(imagePath);
-        } else if (imageUrl) {
-          console.log('📸 Отправляю изображение по URL...');
-          await this.publishImageOnlyUrl(imageUrl);
-        }
-        
-        // Затем текст отдельным сообщением
-        console.log('📝 Отправляю текст...');
-        postData = await this.publishTextOnly(fullText);
-      } 
-      // Если изображение + текст помещается в caption
-      else if (imagePath && await this.fileExists(imagePath)) {
-        console.log('📸 Отправляю изображение из файла...');
+      // Приоритет: файл > URL > только текст
+      if (imagePath && await this.fileExists(imagePath)) {
+        console.log('📸 Отправляю изображение с текстом из файла...');
         postData = await this.publishWithImage(fullText, imagePath);
       } else if (imageUrl) {
-        console.log('📸 Отправляю изображение по URL...');
+        console.log('📸 Отправляю изображение с текстом по URL...');
         postData = await this.publishWithImageUrl(fullText, imageUrl);
       } else {
+        console.log('📝 Отправляю только текст...');
         postData = await this.publishTextOnly(fullText);
       }
 
@@ -82,17 +63,29 @@ export class TelegramPublisherNative {
   formatPostWithSources(postText, hashtags, articles) {
     let fullText = postText;
 
-    // Добавляем источники, если они есть
+    // Добавляем источники компактно, если они есть
     if (articles && articles.length > 0) {
-      fullText += '\n\n📚 Источники:\n';
-      articles.forEach((article, index) => {
-        // Используем markdown формат для ссылок
-        const source = article.source || 'Источник';
-        fullText += `${index + 1}. [${source}](${article.url})\n`;
-      });
+      fullText += '\n\n📚 [Источники](';
+      // Берем первую ссылку как основную
+      fullText += articles[0].url + ')';
     }
 
     fullText += `\n\n${hashtags}`;
+
+    // Telegram caption лимит: 1024 символа
+    // Если всё равно не влезает - обрезаем хештеги
+    if (fullText.length > 1020) {
+      const withoutHashtags = postText + (articles && articles.length > 0 ? `\n\n📚 [Источники](${articles[0].url})` : '');
+      if (withoutHashtags.length <= 1020) {
+        // Убираем часть хештегов
+        const hashtagsArray = hashtags.split(' ');
+        const reducedHashtags = hashtagsArray.slice(0, 5).join(' '); // Только 5 хештегов
+        fullText = withoutHashtags + '\n\n' + reducedHashtags;
+      } else {
+        // Если и без хештегов не влезает - обрезаем
+        fullText = withoutHashtags.substring(0, 1020) + '...';
+      }
+    }
 
     return fullText;
   }

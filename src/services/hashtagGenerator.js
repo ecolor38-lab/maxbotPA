@@ -66,20 +66,20 @@ export class HashtagGenerator {
     
     const hashtags = new Set();
 
-    const baseCount = 4;
+    const baseCount = 3;
     // Добавляем дополнительную проверку что baseHashtags[lang] существует и это массив
     const baseHashtagsArray = this.baseHashtags[lang] || this.baseHashtags['ru'] || [];
     const selectedBase = baseHashtagsArray.slice(0, baseCount);
     selectedBase.forEach(tag => hashtags.add(tag));
 
-    const topicalCount = 3;
+    const topicalCount = 2;
     const relevantTopical = this.selectRelevantTopicalHashtags(postText, articles, lang) || [];
     relevantTopical.slice(0, topicalCount).forEach(tag => hashtags.add(tag));
 
     const trending = this.addTrendingHashtags(lang) || [];
-    trending.forEach(tag => hashtags.add(tag));
+    trending.slice(0, 1).forEach(tag => hashtags.add(tag)); // Только 1 трендовый
 
-    const finalHashtags = Array.from(hashtags).slice(0, 10);
+    const finalHashtags = Array.from(hashtags).slice(0, 6);
 
     console.log(`✅ Сгенерировано ${finalHashtags.length} хештегов`);
 
