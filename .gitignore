@@ -9,6 +9,7 @@ images/
 posts/
 content-plan.json
 published-posts.json
+source-stats.json
 
 # Временные и отладочные файлы
 fix-env.js

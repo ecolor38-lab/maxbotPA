@@ -35,15 +35,13 @@ export class TelegramPublisherNative {
     try {
       let postData;
 
-      // Приоритет: файл > URL > только текст
+      // Приоритет: ТОЛЬКО локальный файл
       if (imagePath && await this.fileExists(imagePath)) {
         console.log('📸 Отправляю изображение с текстом из файла...');
         postData = await this.publishWithImage(fullText, imagePath);
-      } else if (imageUrl) {
-        console.log('📸 Отправляю изображение с текстом по URL...');
-        postData = await this.publishWithImageUrl(fullText, imageUrl);
       } else {
-        console.log('📝 Отправляю только текст...');
+        // Если изображение не скачано - публикуем только текст
+        console.log('⚠️ Изображение недоступно, отправляю только текст...');
         postData = await this.publishTextOnly(fullText);
       }
 
@@ -123,8 +121,8 @@ export class TelegramPublisherNative {
 
       return this.makeFormRequest('/sendPhoto', formData);
     } catch (error) {
-      console.error('Ошибка при публикации с изображением в Telegram:', error.message);
-      console.log('Пытаюсь опубликовать только текст...');
+      console.error('⚠️ Ошибка при публикации с изображением:', error.message);
+      console.log('📝 Публикую только текст...');
       return await this.publishTextOnly(text);
     }
   }

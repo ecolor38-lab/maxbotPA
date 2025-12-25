@@ -106,28 +106,42 @@ export class ImageGenerator {
   }
 
   async downloadImage(url) {
-    try {
-      const imagesDir = path.join(process.cwd(), 'images');
-      await fs.mkdir(imagesDir, { recursive: true });
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const imagesDir = path.join(process.cwd(), 'images');
+        await fs.mkdir(imagesDir, { recursive: true });
 
-      const timestamp = Date.now();
-      const imagePath = path.join(imagesDir, `ai_business_${timestamp}.png`);
+        const timestamp = Date.now();
+        const imagePath = path.join(imagesDir, `ai_business_${timestamp}.png`);
 
-      console.log('⬇️ Скачиваю изображение...');
+        console.log(`⬇️ Скачиваю изображение (попытка ${attempt}/${maxRetries})...`);
 
-      const response = await axios.get(url, this.axiosConfig);
+        const response = await axios.get(url, {
+          ...this.axiosConfig,
+          timeout: 30000,
+          maxRedirects: 5,
+          validateStatus: (status) => status === 200
+        });
 
-      await fs.writeFile(imagePath, response.data);
-
-      console.log(`✅ Изображение сохранено: ${imagePath}`);
-      return imagePath;
-    } catch (error) {
-      console.error('Ошибка при загрузке изображения:', error.message);
-
-      // Если не удалось скачать, возвращаем URL для прямого использования
-      console.log('⚠️ Будет использован прямой URL изображения');
-      return null;
+        if (response.data && response.data.length > 0) {
+          await fs.writeFile(imagePath, response.data);
+          console.log(`✅ Изображение сохранено: ${imagePath}`);
+          return imagePath;
+        }
+      } catch (error) {
+        console.error(`❌ Попытка ${attempt} не удалась:`, error.message);
+        
+        if (attempt < maxRetries) {
+          console.log(`⏳ Жду 2 секунды перед следующей попыткой...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
     }
+
+    console.error('⚠️ Не удалось скачать изображение после всех попыток');
+    return null;
   }
 
   async createFallbackImage() {

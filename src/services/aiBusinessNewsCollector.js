@@ -2,11 +2,13 @@ import Parser from 'rss-parser';
 import axios from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { NewsAnalyzer } from './newsAnalyzer.js';
+import { SourceStats } from './sourceStats.js';
 
 export class AIBusinessNewsCollector {
   constructor(config) {
     this.config = config;
     this.newsAnalyzer = new NewsAnalyzer(config);
+    this.sourceStats = new SourceStats();
     this.parser = new Parser({
       timeout: 30000,
       customFields: {
@@ -200,32 +202,56 @@ export class AIBusinessNewsCollector {
   async collectNews() {
     console.log('🔍 Собираю новости из AI и бизнес источников...\n');
 
+    // Загружаем статистику источников
+    await this.sourceStats.load();
+    this.sourceStats.printBrief();
+
     const sources = this.getSources();
+    
+    // Фильтруем только активные источники
+    const activeSources = sources.rss.filter(source => this.sourceStats.isEnabled(source.name));
+    const disabledCount = sources.rss.length - activeSources.length;
+    
+    if (disabledCount > 0) {
+      console.log(`⚠️ Пропущено ${disabledCount} неактивных источников\n`);
+    }
+
+    // Сортируем по эффективности
+    const sortedSources = this.sourceStats.sortSourcesByEffectiveness(activeSources);
+    
     const allArticles = [];
     let successfulSources = 0;
     let failedSources = 0;
 
     // Собираем из RSS фидов
-    for (const source of sources.rss) {
+    for (const source of sortedSources) {
       try {
-        console.log(`📡 Парсинг: ${source.name}...`);
+        const successRate = this.sourceStats.getSuccessRate(source.name);
+        const ratePercent = Math.round(successRate * 100);
+        console.log(`📡 Парсинг: ${source.name} (успешность: ${ratePercent}%)...`);
+        
         const articles = await this.parseRSSFeed(source);
 
         if (articles && articles.length > 0) {
           allArticles.push(...articles);
           successfulSources++;
+          this.sourceStats.recordSuccess(source.name, articles.length);
           console.log(`   ✓ Найдено статей: ${articles.length}`);
         } else {
+          this.sourceStats.recordFailure(source.name);
           console.log(`   ⚠️ Источник пуст, переход к следующему`);
         }
       } catch (error) {
         failedSources++;
+        this.sourceStats.recordFailure(source.name);
         console.log(`   ✗ Ошибка: ${error.message}`);
         console.log(`   → Продолжаю со следующим источником...`);
-        // Продолжаем работу с другими источниками
         continue;
       }
     }
+
+    // Сохраняем статистику
+    await this.sourceStats.save();
 
     console.log(`\n📊 Обработано источников: ${successfulSources} успешно, ${failedSources} с ошибками`);
 
