@@ -34,8 +34,29 @@ export class TelegramPublisherNative {
     try {
       let postData;
 
-      // Приоритет: файл > URL > только текст
-      if (imagePath && await this.fileExists(imagePath)) {
+      // Telegram лимит для caption: 1024 символа
+      const CAPTION_LIMIT = 1024;
+      const hasImage = (imagePath && await this.fileExists(imagePath)) || imageUrl;
+      
+      // Если есть изображение и текст слишком длинный - публикуем раздельно
+      if (hasImage && fullText.length > CAPTION_LIMIT) {
+        console.log(`⚠️ Текст слишком длинный (${fullText.length} символов) для caption, публикую раздельно...`);
+        
+        // Сначала изображение без подписи
+        if (imagePath && await this.fileExists(imagePath)) {
+          console.log('📸 Отправляю изображение...');
+          await this.publishImageOnly(imagePath);
+        } else if (imageUrl) {
+          console.log('📸 Отправляю изображение по URL...');
+          await this.publishImageOnlyUrl(imageUrl);
+        }
+        
+        // Затем текст отдельным сообщением
+        console.log('📝 Отправляю текст...');
+        postData = await this.publishTextOnly(fullText);
+      } 
+      // Если изображение + текст помещается в caption
+      else if (imagePath && await this.fileExists(imagePath)) {
         console.log('📸 Отправляю изображение из файла...');
         postData = await this.publishWithImage(fullText, imagePath);
       } else if (imageUrl) {
@@ -136,6 +157,45 @@ export class TelegramPublisherNative {
       console.error('Ошибка при публикации с изображением по URL:', error.message);
       console.log('Пытаюсь опубликовать только текст...');
       return await this.publishTextOnly(text);
+    }
+  }
+
+  async publishImageOnly(imagePath) {
+    try {
+      const formData = new FormData();
+      formData.append('chat_id', this.channelId);
+
+      const imageBuffer = await fs.readFile(imagePath);
+      formData.append('photo', imageBuffer, {
+        filename: path.basename(imagePath),
+        contentType: 'image/png'
+      });
+
+      return this.makeFormRequest('/sendPhoto', formData);
+    } catch (error) {
+      console.error('Ошибка при публикации изображения:', error.message);
+      throw error;
+    }
+  }
+
+  async publishImageOnlyUrl(imageUrl) {
+    try {
+      const data = JSON.stringify({
+        chat_id: this.channelId,
+        photo: imageUrl
+      });
+
+      return this.makeRequest('/sendPhoto', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data)
+        },
+        body: data
+      });
+    } catch (error) {
+      console.error('Ошибка при публикации изображения по URL:', error.message);
+      throw error;
     }
   }
 
