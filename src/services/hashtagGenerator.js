@@ -67,14 +67,16 @@ export class HashtagGenerator {
     const hashtags = new Set();
 
     const baseCount = 4;
-    const selectedBase = this.baseHashtags[lang].slice(0, baseCount);
+    // Добавляем дополнительную проверку что baseHashtags[lang] существует и это массив
+    const baseHashtagsArray = this.baseHashtags[lang] || this.baseHashtags['ru'] || [];
+    const selectedBase = baseHashtagsArray.slice(0, baseCount);
     selectedBase.forEach(tag => hashtags.add(tag));
 
     const topicalCount = 3;
-    const relevantTopical = this.selectRelevantTopicalHashtags(postText, articles, lang);
+    const relevantTopical = this.selectRelevantTopicalHashtags(postText, articles, lang) || [];
     relevantTopical.slice(0, topicalCount).forEach(tag => hashtags.add(tag));
 
-    const trending = this.addTrendingHashtags(lang);
+    const trending = this.addTrendingHashtags(lang) || [];
     trending.forEach(tag => hashtags.add(tag));
 
     const finalHashtags = Array.from(hashtags).slice(0, 10);
@@ -122,8 +124,8 @@ export class HashtagGenerator {
     }
 
     if (relevant.length < 3) {
-      const fallback = this.topicalHashtags[normalizedLang] || this.topicalHashtags['ru'];
-      const filtered = fallback.filter(tag => !relevant.includes(tag));
+      const fallback = this.topicalHashtags[normalizedLang] || this.topicalHashtags['ru'] || [];
+      const filtered = Array.isArray(fallback) ? fallback.filter(tag => !relevant.includes(tag)) : [];
       relevant.push(...filtered.slice(0, 3 - relevant.length));
     }
 
