@@ -3,6 +3,7 @@ import axios from 'axios';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
 export class ImageGenerator {
   constructor(config) {
@@ -106,66 +107,133 @@ export class ImageGenerator {
   }
 
   async downloadImage(url) {
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const imagesDir = path.join(process.cwd(), 'images');
+    try {
+      // Пробуем несколько путей для сохранения (для разных платформ)
+      const possibleDirs = [
+        path.join(process.cwd(), 'images'),  // Основной путь
+        '/tmp/images',                        // Для Render/Railway (ephemeral FS)
+        path.join(os.tmpdir(), 'images')     // Системная временная папка
+      ];
+
+      let imagesDir = null;
+      
+      // Находим первую рабочую папку
+      for (const dir of possibleDirs) {
+        console.log(`📂 Проверяю папку: ${dir}`);
         
-        // Пытаемся создать папку, игнорируем ошибки если нет прав
         try {
-          await fs.mkdir(imagesDir, { recursive: true });
-        } catch (mkdirError) {
-          // Если папка существует или нет прав - продолжаем
-          if (mkdirError.code !== 'EEXIST' && mkdirError.code !== 'EACCES') {
-            throw mkdirError;
-          }
-        }
-
-        const timestamp = Date.now();
-        const imagePath = path.join(imagesDir, `ai_business_${timestamp}.png`);
-
-        console.log(`⬇️ Скачиваю изображение (попытка ${attempt}/${maxRetries})...`);
-
-        const response = await axios.get(url, {
-          ...this.axiosConfig,
-          timeout: 30000,
-          maxRedirects: 5,
-          validateStatus: (status) => status === 200
-        });
-
-        if (response.data && response.data.length > 0) {
-          try {
-            await fs.writeFile(imagePath, response.data);
-            console.log(`✅ Изображение сохранено: ${imagePath}`);
-            return imagePath;
-          } catch (writeError) {
-            if (writeError.code === 'EACCES') {
-              console.error(`⚠️ Нет прав на запись в ${imagesDir}`);
-              // На production без прав записи - публикуем без картинки
-              return null;
+          await fs.mkdir(dir, { recursive: true });
+          
+          // Проверяем, что папка действительно создана и доступна для записи
+          const stats = await fs.stat(dir);
+          if (stats.isDirectory()) {
+            // Пробуем создать тестовый файл
+            const testFile = path.join(dir, '.test');
+            try {
+              await fs.writeFile(testFile, 'test');
+              await fs.unlink(testFile);
+              console.log(`✅ Папка images готова: ${dir}`);
+              imagesDir = dir;
+              break;  // Нашли рабочую папку!
+            } catch (testError) {
+              console.log(`⚠️ Папка ${dir} не доступна для записи: ${testError.code}`);
             }
-            throw writeError;
           }
-        }
-      } catch (error) {
-        // Если проблема с правами - сразу выходим
-        if (error.code === 'EACCES') {
-          console.error(`⚠️ Недостаточно прав для работы с изображениями`);
-          return null;
-        }
-        
-        console.error(`❌ Попытка ${attempt} не удалась:`, error.message);
-        
-        if (attempt < maxRetries) {
-          console.log(`⏳ Жду 2 секунды перед следующей попыткой...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (mkdirError) {
+          console.log(`⚠️ Не удалось создать ${dir}: ${mkdirError.code}`);
+          continue;
         }
       }
-    }
 
-    console.error('⚠️ Не удалось скачать изображение после всех попыток');
-    return null;
+      if (!imagesDir) {
+        console.error(`❌ Не удалось найти доступную папку для изображений`);
+        console.error(`⚠️ Работаю без сохранения изображений (только URL)`);
+        return null;
+      }
+
+      const maxRetries = 3;
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          // Пересоздаем папку перед каждой попыткой (на случай эфемерной FS)
+          try {
+            await fs.mkdir(imagesDir, { recursive: true });
+            console.log(`✅ Папка проверена перед попыткой ${attempt}`);
+          } catch (mkdirError) {
+            // Игнорируем EEXIST
+            if (mkdirError.code !== 'EEXIST') {
+              console.error(`⚠️ Проблема с папкой:`, mkdirError.message);
+            }
+          }
+
+          const timestamp = Date.now();
+          const imagePath = path.join(imagesDir, `ai_business_${timestamp}.png`);
+
+          console.log(`⬇️ Скачиваю изображение (попытка ${attempt}/${maxRetries})...`);
+          console.log(`📍 Путь сохранения: ${imagePath}`);
+
+          const response = await axios.get(url, {
+            ...this.axiosConfig,
+            timeout: 30000,
+            maxRedirects: 5,
+            validateStatus: (status) => status === 200
+          });
+
+          if (response.data && response.data.length > 0) {
+            try {
+              // Еще раз проверяем папку прямо перед записью
+              await fs.mkdir(imagesDir, { recursive: true });
+              
+              await fs.writeFile(imagePath, response.data);
+              console.log(`✅ Изображение сохранено: ${imagePath}`);
+              
+              // Проверяем, что файл действительно создан
+              const fileStats = await fs.stat(imagePath);
+              console.log(`✅ Размер файла: ${fileStats.size} байт`);
+              
+              return imagePath;
+            } catch (writeError) {
+              // Ошибка записи файла
+              console.error(`⚠️ Ошибка записи файла:`, writeError.message);
+              console.error(`⚠️ Код ошибки:`, writeError.code);
+              console.error(`⚠️ Путь:`, imagePath);
+              
+              if (writeError.code === 'EACCES' || writeError.code === 'EROFS') {
+                console.error(`⚠️ Нет прав на запись файла (read-only FS) - публикую без картинки`);
+                return null;
+              }
+              if (writeError.code === 'ENOENT') {
+                console.error(`⚠️ Папка ${imagesDir} недоступна или FS только для чтения`);
+                // Не выходим сразу, пробуем еще раз
+                if (attempt >= maxRetries) {
+                  console.error(`⚠️ Файловая система не поддерживает запись - работаем без изображений`);
+                  return null;
+                }
+              } else {
+                throw writeError;
+              }
+            }
+          } else {
+            console.log(`⚠️ Получен пустой ответ от сервера`);
+          }
+        } catch (error) {
+          console.error(`❌ Попытка ${attempt} не удалась:`, error.message);
+          console.error(`❌ Код ошибки:`, error.code || 'N/A');
+          
+          if (attempt < maxRetries) {
+            console.log(`⏳ Жду 2 секунды перед следующей попыткой...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+      }
+
+      console.error('⚠️ Не удалось скачать изображение после всех попыток');
+      return null;
+    } catch (error) {
+      console.error('⚠️ Критическая ошибка при работе с изображениями:', error.message);
+      console.error('⚠️ Stack trace:', error.stack);
+      return null;
+    }
   }
 
   async createFallbackImage() {
