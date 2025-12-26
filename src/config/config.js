@@ -42,6 +42,11 @@ export const config = {
     apiKey: process.env.ANTHROPIC_API_KEY,
     model: 'claude-3-5-haiku-20241022'
   },
+  qwen: {
+    apiKey: process.env.QWEN_API_KEY,
+    model: 'qwen-vl-max', // Модель для генерации изображений
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1'
+  },
   scheduler: {
     cronSchedule: process.env.CRON_SCHEDULE || '0 9 * * *'
   },
