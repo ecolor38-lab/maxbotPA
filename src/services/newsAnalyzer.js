@@ -71,7 +71,7 @@ export class NewsAnalyzer {
       const prompt = this.createAnalysisPrompt(article);
 
       const response = await this.anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
+        model: this.config.anthropic.model,
         max_tokens: 500,
         messages: [{
           role: 'user',

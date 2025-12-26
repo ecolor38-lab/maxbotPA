@@ -30,3 +30,6 @@ echo "   pm2 restart ai-bot"
 echo "   или"
 echo "   npm start"
 
+
+
+

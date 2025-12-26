@@ -26,7 +26,26 @@ export class ContentPlanner {
   }
 
   async savePlan(plan) {
-    await fs.writeFile(this.planFile, JSON.stringify(plan, null, 2), 'utf8');
+    try {
+      // Убеждаемся, что директория существует
+      const dir = path.dirname(this.planFile);
+      try {
+        await fs.access(dir);
+      } catch (error) {
+        // Директория не существует, пытаемся создать
+        await fs.mkdir(dir, { recursive: true });
+      }
+
+      await fs.writeFile(this.planFile, JSON.stringify(plan, null, 2), 'utf8');
+    } catch (error) {
+      if (error.code === 'EACCES' || error.code === 'EPERM') {
+        const errorMsg = `Нет прав доступа для записи файла ${this.planFile}. ` +
+          `Проверьте права доступа файла или настройки Docker volume (если используется контейнер). ` +
+          `В Docker рекомендуется монтировать директорию, а не файл напрямую.`;
+        throw new Error(errorMsg);
+      }
+      throw error;
+    }
   }
 
   async loadPublished() {
@@ -42,7 +61,25 @@ export class ContentPlanner {
   }
 
   async savePublished(published) {
-    await fs.writeFile(this.publishedFile, JSON.stringify(published, null, 2), 'utf8');
+    try {
+      // Убеждаемся, что директория существует
+      const dir = path.dirname(this.publishedFile);
+      try {
+        await fs.access(dir);
+      } catch (error) {
+        // Директория не существует, пытаемся создать
+        await fs.mkdir(dir, { recursive: true });
+      }
+
+      await fs.writeFile(this.publishedFile, JSON.stringify(published, null, 2), 'utf8');
+    } catch (error) {
+      if (error.code === 'EACCES' || error.code === 'EPERM') {
+        const errorMsg = `Нет прав доступа для записи файла ${this.publishedFile}. ` +
+          `Проверьте права доступа файла или настройки Docker volume (если используется контейнер).`;
+        throw new Error(errorMsg);
+      }
+      throw error;
+    }
   }
 
   async addArticlesToPlan(articles) {

@@ -71,6 +71,18 @@ class NewsCollector {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const collector = new NewsCollector();
+  
+  // Graceful shutdown handlers
+  process.on('SIGTERM', () => {
+    console.log('\n👋 Получен SIGTERM, завершаю работу...');
+    process.exit(0);
+  });
+
+  process.on('SIGINT', () => {
+    console.log('\n👋 Получен SIGINT (Ctrl+C), завершаю работу...');
+    process.exit(0);
+  });
+  
   collector.run()
     .then(() => {
       console.log('\n👋 Завершение работы');

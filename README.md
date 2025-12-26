@@ -340,8 +340,8 @@ pm2 startup
 - [DEPLOY.md](./DEPLOY.md) - Деплой на различные платформы
 - [PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md) - 🚀 Настройка production окружения
 - [SOURCE_LEARNING.md](./SOURCE_LEARNING.md) - 🧠 Система обучения источников
+- [QUICKSTART_EXPRESS.md](./QUICKSTART_EXPRESS.md) - Быстрый старт Express API
 - [examples/README.md](./examples/README.md) - Примеры использования
-- [FINAL_README.md](./FINAL_README.md) - Оригинальная документация
 - [SECURITY.md](./SECURITY.md) - Безопасность
 
 ## 🆘 Поддержка

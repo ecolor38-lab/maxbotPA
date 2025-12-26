@@ -114,10 +114,13 @@ services:
     volumes:
       - ./images:/app/images
       - ./posts:/app/posts
-      - ./source-stats.json:/app/source-stats.json
+      # Не монтируйте JSON файлы напрямую - может вызвать проблемы с правами
+      # Приложение создаст их автоматически (content-plan.json, published-posts.json, source-stats.json)
     environment:
       - NODE_ENV=production
 ```
+
+**⚠️ Важно:** Не монтируйте файлы конфигурации (`.json`) напрямую в Docker volumes, так как это может вызвать ошибки прав доступа. Приложение создаст эти файлы автоматически при первом запуске.
 
 ---
 
