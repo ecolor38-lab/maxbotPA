@@ -1,10 +1,42 @@
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
 export class ContentPlanner {
   constructor() {
-    this.planFile = path.join(process.cwd(), 'content-plan.json');
-    this.publishedFile = path.join(process.cwd(), 'published-posts.json');
+    // Используем /tmp для Docker/read-only окружений
+    const dataDir = this.getWritableDir();
+    this.planFile = path.join(dataDir, 'content-plan.json');
+    this.publishedFile = path.join(dataDir, 'published-posts.json');
+    console.log(`📂 Используется директория для данных: ${dataDir}`);
+  }
+
+  getWritableDir() {
+    // Приоритет директорий для разных окружений
+    const possibleDirs = [
+      process.cwd(),                    // Текущая директория (локально)
+      '/data',                          // Docker volume (если смонтирован)
+      '/tmp/ai-bot',                    // Временная директория (Docker/Railway/Render)
+      path.join(os.tmpdir(), 'ai-bot')  // Системная временная директория
+    ];
+
+    // Проверяем какая директория доступна для записи
+    for (const dir of possibleDirs) {
+      try {
+        // Синхронная проверка при инициализации
+        const testFile = path.join(dir, '.write-test');
+        require('fs').writeFileSync(testFile, 'test');
+        require('fs').unlinkSync(testFile);
+        return dir;
+      } catch (error) {
+        // Директория недоступна, пробуем следующую
+        continue;
+      }
+    }
+
+    // Если ничего не подошло, используем /tmp (всегда доступна)
+    console.warn('⚠️ Не найдена директория для записи, использую /tmp');
+    return '/tmp';
   }
 
   async loadPlan() {
@@ -38,11 +70,11 @@ export class ContentPlanner {
 
       await fs.writeFile(this.planFile, JSON.stringify(plan, null, 2), 'utf8');
     } catch (error) {
-      if (error.code === 'EACCES' || error.code === 'EPERM') {
-        const errorMsg = `Нет прав доступа для записи файла ${this.planFile}. ` +
-          `Проверьте права доступа файла или настройки Docker volume (если используется контейнер). ` +
-          `В Docker рекомендуется монтировать директорию, а не файл напрямую.`;
-        throw new Error(errorMsg);
+      if (error.code === 'EACCES' || error.code === 'EPERM' || error.code === 'EROFS') {
+        console.error(`❌ Нет прав на запись в ${this.planFile}`);
+        console.error('⚠️ Работаю в режиме без сохранения контент-плана (ephemeral mode)');
+        // Не падаем, просто предупреждаем
+        return;
       }
       throw error;
     }

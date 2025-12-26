@@ -1,4 +1,3 @@
-// PM2 конфигурация для AI Business Bot
 module.exports = {
   apps: [{
     name: 'ai-bot',
@@ -18,10 +17,5 @@ module.exports = {
     time: true
   }]
 };
-
-
-
-
-
 
 

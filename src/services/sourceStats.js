@@ -1,10 +1,34 @@
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
 
 export class SourceStats {
   constructor() {
-    this.statsFile = path.join(process.cwd(), 'source-stats.json');
+    const dataDir = this.getWritableDir();
+    this.statsFile = path.join(dataDir, 'source-stats.json');
     this.stats = null;
+  }
+
+  getWritableDir() {
+    const possibleDirs = [
+      process.cwd(),
+      '/data',
+      '/tmp/ai-bot',
+      path.join(os.tmpdir(), 'ai-bot')
+    ];
+
+    for (const dir of possibleDirs) {
+      try {
+        const testFile = path.join(dir, '.write-test');
+        require('fs').writeFileSync(testFile, 'test');
+        require('fs').unlinkSync(testFile);
+        return dir;
+      } catch (error) {
+        continue;
+      }
+    }
+
+    return '/tmp';
   }
 
   async load() {
