@@ -7,133 +7,62 @@ import { TelegramPublisherNative } from './services/telegramPublisherNative.js';
 export class AIBusinessBot {
   constructor() {
     this.newsCollector = new AIBusinessNewsCollector(config);
-    this.aiSummarizer = new AISummarizer(config);
+    this.summarizer = new AISummarizer(config);
     this.hashtagGenerator = new HashtagGenerator(config);
-    this.telegramPublisher = new TelegramPublisherNative(config);
+    this.publisher = new TelegramPublisherNative(config);
   }
 
   async run() {
-    console.log('🚀 Запуск AI бизнес бота для сбора новостей...\n');
+    console.log('🚀 Запуск бота...\n');
 
     try {
-      const connectionOk = await this.telegramPublisher.testConnection();
-      if (!connectionOk) {
-        console.log('⚠️ Не удалось подключиться к Telegram Bot API');
-        console.log('📝 Бот будет работать в режиме сохранения постов в файлы\n');
-      } else {
-        console.log('');
-      }
+      await this.publisher.testConnection();
 
-      // Собираем новости из научных источников
-      let articles;
-      try {
-        articles = await this.newsCollector.collectNews();
-
-        // Если реальных статей нет, используем демо
-        if (articles.length === 0) {
-          console.log('⚠️ Реальных новостей не найдено, используем демо-статьи\n');
-          articles = this.newsCollector.getDemoArticles();
-        }
-      } catch (error) {
-        console.log('⚠️ Ошибка при сборе новостей, используем демо-статьи\n');
+      // Сбор новостей
+      let articles = await this.newsCollector.collectNews();
+      if (!articles.length) {
+        console.log('⚠️ Новостей нет, используем демо');
         articles = this.newsCollector.getDemoArticles();
-      }
-
-      if (articles.length === 0) {
-        console.log('⚠️ Новых статей не найдено');
-        return;
       }
 
       console.log(`\n📚 Обработка ${articles.length} статей...\n`);
 
-      const postText = await this.aiSummarizer.generateSummary(articles);
+      // Генерация поста
+      const text = await this.summarizer.generateSummary(articles);
+      if (!text) throw new Error('Не удалось сгенерировать текст');
 
-      // Проверяем что постText не пустой
-      if (!postText || postText.trim() === '') {
-        console.error('❌ Не удалось сгенерировать текст поста');
-        return;
-      }
+      const hashtags = this.hashtagGenerator.generateHashtags(text);
 
-      const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
+      console.log('\n📝 Пост:\n' + '─'.repeat(50));
+      console.log(text);
+      console.log(hashtags);
+      console.log('─'.repeat(50) + '\n');
 
-      console.log('\n📝 Предпросмотр поста:\n');
-      console.log('─'.repeat(60));
-      console.log(postText);
-      console.log('\n' + hashtags);
-      console.log('\n📚 Источники (превью автоматически):');
-      articles.forEach((article, index) => {
-        console.log(`${index + 1}. ${article.source}: ${article.url}`);
-      });
-      console.log('─'.repeat(60));
-      console.log('');
+      // Публикация
+      const result = await this.publisher.publish(text, hashtags, null, articles);
 
-      const result = await this.telegramPublisher.publish(postText, hashtags, null, articles);
-
-      console.log('\n✅ Задача выполнена успешно!');
-      console.log(`📊 Статистика:`);
-      console.log(`   - Найдено статей: ${articles.length}`);
-      console.log(`   - Длина поста: ${postText.length} символов`);
-      console.log(`   - Хештегов: ${hashtags.split(' ').length}`);
-      console.log(`   - Превью: автоматически по ссылке`);
-
+      console.log('✅ Готово!');
       return result;
     } catch (error) {
-      console.error('\n❌ Ошибка при выполнении:', error.message);
-      console.error(error.stack);
+      console.error('❌ Ошибка:', error.message);
       throw error;
     }
   }
 
-  // Метод для генерации и публикации из предоставленных статей
   async generateAndPublish(articles) {
-    console.log(`📚 Генерирую пост из ${articles.length} статей...\n`);
+    const text = await this.summarizer.generateSummary(articles);
+    if (!text) throw new Error('Не удалось сгенерировать текст');
 
-    const postText = await this.aiSummarizer.generateSummary(articles);
-
-    // Проверяем что постText не пустой
-    if (!postText || postText.trim() === '') {
-      console.error('❌ Не удалось сгенерировать текст поста');
-      throw new Error('Failed to generate post text');
-    }
-
-    const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
-
-    console.log('\n📝 Предпросмотр поста:\n');
-    console.log('─'.repeat(60));
-    console.log(postText);
-    console.log('\n' + hashtags);
-    console.log('─'.repeat(60) + '\n');
-
-    // Публикуем текст - Telegram автоматически покажет превью по ссылке
-    const result = await this.telegramPublisher.publish(postText, hashtags, null, articles);
-
-    console.log('✅ Пост опубликован!');
-    console.log(`📊 Статистика:`);
-    console.log(`   - Статей: ${articles.length}`);
-    console.log(`   - Длина: ${postText.length} символов`);
-    console.log(`   - Превью: автоматически по ссылке`);
-
-    return result;
+    const hashtags = this.hashtagGenerator.generateHashtags(text);
+    return await this.publisher.publish(text, hashtags, null, articles);
   }
 }
 
-// Проверка, запущен ли файл напрямую (работает на Windows и Unix)
-const isMainModule =
-  import.meta.url === `file://${process.argv[1]}` ||
-  import.meta.url.endsWith(process.argv[1]) ||
-  process.argv[1]?.endsWith('src/index.js') ||
-  process.argv[1]?.endsWith('src\\index.js');
-
-if (isMainModule) {
+// Запуск напрямую
+if (process.argv[1]?.includes('index.js')) {
   const bot = new AIBusinessBot();
   bot
     .run()
-    .then(() => {
-      console.log('\n👋 Завершение работы бота');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('\n💥 Критическая ошибка:', error.message);
-      process.exit(1);
-    });
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
 }
