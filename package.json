@@ -15,7 +15,8 @@
     "test:watch": "NODE_ENV=test mocha tests/**/*.test.js --watch",
     "test:coverage": "NODE_ENV=test c8 mocha tests/**/*.test.js",
     "lint": "eslint src/**/*.js server.js --fix",
-    "format": "prettier --write \"src/**/*.js\" \"server.js\""
+    "format": "prettier --write \"src/**/*.js\" \"server.js\"",
+    "format:check": "prettier --check \"src/**/*.js\" \"server.js\""
   },
   "keywords": [
     "ai",
