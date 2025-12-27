@@ -1,5 +1,23 @@
 # 📚 Команды PM2 и NPM для maxbotPA
 
+## 💻 ВАЖНО: Windows vs Linux
+
+Этот файл содержит команды для **Linux/Mac** и **Windows**.
+
+### Для пользователей Windows:
+- Используйте **PowerShell** вместо bash
+- Пути: `\` вместо `/` (но PM2 работает с обоими)
+- Вместо `nano` используйте `notepad` или VS Code
+- Вместо `cron` используйте **Task Scheduler** (Планировщик заданий)
+- Готовые скрипты: `monitor-bot.bat` и `monitor-bot.ps1`
+
+### Для пользователей Linux/Mac:
+- Используйте **bash/zsh** терминал
+- Все команды работают как есть
+- Используйте `cron` для автоматизации
+
+---
+
 ## 🚀 БЫСТРЫЙ СТАРТ
 
 ### Первый запуск на сервере
@@ -325,6 +343,151 @@ pm2 start ecosystem.config.cjs --env production
 
 ---
 
+## 🪟 WINDOWS СПЕЦИФИЧНЫЕ КОМАНДЫ
+
+### Базовые команды PowerShell
+
+```powershell
+# Проверить статус бота
+pm2 status
+
+# Посмотреть логи (последние 50 строк)
+pm2 logs ai-bot --lines 50
+
+# Перезапустить бота
+pm2 restart ai-bot
+
+# Остановить бота
+pm2 stop ai-bot
+
+# Удалить из PM2
+pm2 delete ai-bot
+
+# Запустить бота
+pm2 start ecosystem.config.cjs
+
+# Сохранить конфигурацию
+pm2 save
+```
+
+### Работа с файлами (PowerShell)
+
+```powershell
+# Редактировать .env файл
+notepad .env
+# или
+code .env  # Если установлен VS Code
+
+# Просмотр содержимого файла
+Get-Content .env
+Get-Content server.js
+
+# Поиск в файлах
+Select-String -Path "src\*.js" -Pattern "TELEGRAM"
+
+# Список файлов
+Get-ChildItem -Recurse -Filter "*.js"
+```
+
+### Мониторинг бота (Windows)
+
+```powershell
+# Запустить скрипт мониторинга вручную
+.\monitor-bot.ps1
+
+# Или batch версию
+.\monitor-bot.bat
+
+# Посмотреть лог перезапусков
+Get-Content bot-restart.log -Tail 20
+
+# Очистить лог
+Remove-Item bot-restart.log
+```
+
+### Автозапуск через Task Scheduler
+
+**Создание задачи через GUI:**
+1. Нажмите `Win + R`, введите `taskschd.msc`
+2. Action → Create Basic Task
+3. Name: `Monitor AI Bot`
+4. Trigger: Daily, повторять каждые 5 минут
+5. Action: Start a program
+   - Program: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+   - Arguments: `-ExecutionPolicy Bypass -File "C:\Users\Андрей\OneDrive\Документы\GitHub\maxbotPA\monitor-bot.ps1"`
+   - Start in: `C:\Users\Андрей\OneDrive\Документы\GitHub\maxbotPA`
+
+**Создание задачи через PowerShell:**
+```powershell
+# Создать задачу для мониторинга (запускать с правами админа)
+$action = New-ScheduledTaskAction -Execute "powershell.exe" `
+    -Argument "-ExecutionPolicy Bypass -File `"$PWD\monitor-bot.ps1`"" `
+    -WorkingDirectory $PWD
+
+$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+    -RepetitionInterval (New-TimeSpan -Minutes 5) `
+    -RepetitionDuration ([TimeSpan]::MaxValue)
+
+Register-ScheduledTask -TaskName "Monitor AI Bot" `
+    -Action $action `
+    -Trigger $trigger `
+    -Description "Автоматический мониторинг и перезапуск бота"
+
+# Проверить задачу
+Get-ScheduledTask -TaskName "Monitor AI Bot"
+
+# Удалить задачу
+Unregister-ScheduledTask -TaskName "Monitor AI Bot" -Confirm:$false
+```
+
+### Диагностика на Windows
+
+```powershell
+# Проверить что PM2 установлен
+pm2 --version
+
+# Проверить Node.js версию
+node --version
+
+# Проверить npm версию
+npm --version
+
+# Найти процессы Node.js
+Get-Process | Where-Object {$_.ProcessName -eq "node"}
+
+# Убить все процессы Node.js (крайний случай!)
+Get-Process | Where-Object {$_.ProcessName -eq "node"} | Stop-Process -Force
+
+# Проверить занятость порта
+netstat -ano | findstr :3001
+
+# Убить процесс по порту (замените PID)
+Stop-Process -Id <PID> -Force
+```
+
+### Git команды для Windows
+
+```powershell
+# Обновить код
+git pull origin main
+
+# Проверить статус
+git status
+
+# Посмотреть изменения
+git diff
+
+# Коммит изменений
+git add .
+git commit -m "Update: описание изменений"
+git push origin main
+
+# Отменить изменения
+git restore .
+```
+
+---
+
 ## 📊 МОНИТОРИНГ
 
 ### Проверка здоровья приложения
@@ -360,7 +523,9 @@ curl -X POST http://localhost:3001/api/content/collect
 curl -X POST http://localhost:3001/api/scheduler/start
 ```
 
-### Автоматический мониторинг (cron)
+### Автоматический мониторинг
+
+#### Linux (cron)
 ```bash
 # Создать скрипт мониторинга
 nano /home/user/monitor-bot.sh
@@ -370,7 +535,7 @@ nano /home/user/monitor-bot.sh
 if ! pm2 show ai-bot | grep -q "online"; then
     echo "Bot is down! Restarting..."
     pm2 restart ai-bot
-    echo "Bot restarted at $(date)" >> /var/log/bot-restart.log
+    echo "Bot restarted at $(date)" >> ~/bot-restart.log
 fi
 
 # Сделать исполняемым
@@ -380,6 +545,25 @@ chmod +x /home/user/monitor-bot.sh
 crontab -e
 # Добавить строку:
 */5 * * * * /home/user/monitor-bot.sh
+```
+
+#### Windows (Task Scheduler)
+```powershell
+# Использовать готовый скрипт из проекта
+# Вариант 1: Batch скрипт
+.\monitor-bot.bat
+
+# Вариант 2: PowerShell скрипт (рекомендуется)
+.\monitor-bot.ps1
+
+# Настроить автозапуск через Task Scheduler:
+# 1. Откройте Task Scheduler (Планировщик заданий)
+# 2. Создать базовую задачу -> Имя: "Monitor AI Bot"
+# 3. Триггер: повторять каждые 5 минут
+# 4. Действие: Запустить программу
+#    - Программа: powershell.exe
+#    - Аргументы: -File "C:\path\to\maxbotPA\monitor-bot.ps1"
+#    - Рабочая папка: "C:\path\to\maxbotPA"
 ```
 
 ---
