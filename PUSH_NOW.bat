@@ -9,7 +9,7 @@ echo ========================================
 echo.
 
 git add -A
-git commit -m "fix: remove useless escape characters in validation regex"
+git commit -m "fix: add format:check script to package.json for CI"
 git push origin main
 
 echo.
