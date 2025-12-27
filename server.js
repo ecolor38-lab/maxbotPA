@@ -3,6 +3,10 @@ import { config } from './src/config/config.js';
 import { AIBusinessBot } from './src/index.js';
 import { BotScheduler } from './src/scheduler.js';
 import { ContentPlanner } from './src/services/contentPlanner.js';
+import { apiLimiter, strictLimiter, healthCheckLimiter } from './src/middleware/rateLimit.js';
+import { validate, runBotSchema, publishSchema, collectSchema } from './src/middleware/validation.js';
+import { logger } from './src/utils/logger.js';
+import { metricsMiddleware, register } from './src/utils/metrics.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,6 +14,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(metricsMiddleware);
 
 // CORS для удобства работы с фронтендом
 app.use((req, res, next) => {
@@ -19,6 +24,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rate limiting для API
+app.use('/api/', apiLimiter);
+
 // Инициализация сервисов
 let scheduler = null;
 let bot = null;
@@ -26,35 +34,46 @@ let contentPlanner = null;
 
 async function initializeServices() {
   try {
-    console.log('🔄 Инициализация сервисов...');
+    logger.info('🔄 Инициализация сервисов...');
     bot = new AIBusinessBot();
     scheduler = new BotScheduler();
     contentPlanner = new ContentPlanner();
-    console.log('✅ Сервисы инициализированы');
+    logger.info('✅ Сервисы инициализированы');
     return true;
   } catch (error) {
-    console.error('❌ Ошибка инициализации сервисов:', error.message);
-    console.error('⚠️ Сервер запустится, но функциональность ограничена');
+    logger.error('❌ Ошибка инициализации сервисов:', error);
+    logger.warn('⚠️ Сервер запустится, но функциональность ограничена');
     return false;
   }
 }
 
 // Инициализируем сервисы
 initializeServices().catch(err => {
-  console.error('❌ Критическая ошибка инициализации:', err);
+  logger.error('❌ Критическая ошибка инициализации:', err);
 });
 
 // ====================
 // HEALTH CHECK
 // ====================
 
-app.get('/health', (req, res) => {
+app.get('/health', healthCheckLimiter, (req, res) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Prometheus metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (error) {
+    logger.error('Error generating metrics:', error);
+    res.status(500).end();
+  }
 });
 
 app.get('/', (req, res) => {
@@ -104,13 +123,13 @@ app.get('/api/bot/status', (req, res) => {
 });
 
 // Запустить бота один раз (сбор новостей и публикация)
-app.post('/api/bot/run', async (req, res) => {
+app.post('/api/bot/run', strictLimiter, validate(runBotSchema), async (req, res) => {
   try {
     if (!bot) {
       return res.status(500).json({ error: 'Бот не инициализирован' });
     }
 
-    console.log('🚀 API запрос: Запуск бота');
+    logger.info('🚀 API запрос: Запуск бота');
     
     // Отправляем немедленный ответ
     res.json({ 
@@ -121,26 +140,26 @@ app.post('/api/bot/run', async (req, res) => {
     // Запускаем бота в фоне
     bot.run()
       .then((result) => {
-        console.log('✅ Бот успешно завершил работу:', result);
+        logger.info('✅ Бот успешно завершил работу', { result });
       })
       .catch((error) => {
-        console.error('❌ Ошибка выполнения бота:', error.message);
+        logger.error('❌ Ошибка выполнения бота:', error);
       });
 
   } catch (error) {
-    console.error('❌ Ошибка API:', error.message);
+    logger.error('❌ Ошибка API:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Опубликовать следующий пост из очереди
-app.post('/api/bot/publish', async (req, res) => {
+app.post('/api/bot/publish', strictLimiter, validate(publishSchema), async (req, res) => {
   try {
     if (!scheduler) {
       return res.status(500).json({ error: 'Планировщик не инициализирован' });
     }
 
-    console.log('📤 API запрос: Публикация следующего поста');
+    logger.info('📤 API запрос: Публикация следующего поста');
     
     // Отправляем немедленный ответ
     res.json({ 
@@ -151,14 +170,14 @@ app.post('/api/bot/publish', async (req, res) => {
     // Публикуем в фоне
     scheduler.runScheduledPost()
       .then(() => {
-        console.log('✅ Пост успешно опубликован');
+        logger.info('✅ Пост успешно опубликован');
       })
       .catch((error) => {
-        console.error('❌ Ошибка публикации:', error.message);
+        logger.error('❌ Ошибка публикации:', error);
       });
 
   } catch (error) {
-    console.error('❌ Ошибка API:', error.message);
+    logger.error('❌ Ошибка API:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -177,7 +196,7 @@ app.get('/api/content/stats', async (req, res) => {
     const stats = await contentPlanner.getPlanStats();
     res.json(stats);
   } catch (error) {
-    console.error('❌ Ошибка получения статистики:', error.message);
+    logger.error('❌ Ошибка получения статистики:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -204,19 +223,19 @@ app.get('/api/content/queue', async (req, res) => {
       queue: queue
     });
   } catch (error) {
-    console.error('❌ Ошибка получения очереди:', error.message);
+    logger.error('❌ Ошибка получения очереди:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Собрать новости и добавить в контент-план
-app.post('/api/content/collect', async (req, res) => {
+app.post('/api/content/collect', strictLimiter, validate(collectSchema), async (req, res) => {
   try {
     if (!scheduler) {
       return res.status(500).json({ error: 'Планировщик не инициализирован' });
     }
 
-    console.log('🔄 API запрос: Сбор новостей');
+    logger.info('🔄 API запрос: Сбор новостей');
     
     // Отправляем немедленный ответ
     res.json({ 
@@ -227,14 +246,14 @@ app.post('/api/content/collect', async (req, res) => {
     // Собираем в фоне
     scheduler.collectAndPlan()
       .then(() => {
-        console.log('✅ Новости собраны и добавлены в контент-план');
+        logger.info('✅ Новости собраны и добавлены в контент-план');
       })
       .catch((error) => {
-        console.error('❌ Ошибка сбора новостей:', error.message);
+        logger.error('❌ Ошибка сбора новостей:', error);
       });
 
   } catch (error) {
-    console.error('❌ Ошибка API:', error.message);
+    logger.error('❌ Ошибка API:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -269,7 +288,7 @@ app.post('/api/scheduler/start', (req, res) => {
       schedules: scheduler.schedules
     });
   } catch (error) {
-    console.error('❌ Ошибка запуска планировщика:', error.message);
+    logger.error('❌ Ошибка запуска планировщика:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -292,14 +311,14 @@ app.get('/api/scheduler/status', (req, res) => {
 
 app.post('/webhook/telegram', async (req, res) => {
   try {
-    console.log('📨 Получен webhook от Telegram:', req.body);
+    logger.info('📨 Получен webhook от Telegram', { body: req.body });
     
     // Здесь можно обрабатывать команды от Telegram
     // Например, /publish, /stats и т.д.
     
     res.sendStatus(200);
   } catch (error) {
-    console.error('❌ Ошибка обработки webhook:', error.message);
+    logger.error('❌ Ошибка обработки webhook:', error);
     res.sendStatus(500);
   }
 });
@@ -309,7 +328,7 @@ app.post('/webhook/telegram', async (req, res) => {
 // ====================
 
 app.use((err, req, res, next) => {
-  console.error('💥 Необработанная ошибка:', err);
+  logger.error('💥 Необработанная ошибка:', err);
   res.status(500).json({
     error: 'Internal Server Error',
     message: err.message
@@ -328,86 +347,85 @@ app.use((req, res) => {
 // ====================
 
 const server = app.listen(PORT, '0.0.0.0', async () => {
-  console.log('\n' + '='.repeat(60));
-  console.log('🚀 AI Business Bot Server запущен!');
-  console.log('='.repeat(60));
-  console.log(`📡 Сервер слушает порт: ${PORT}`);
-  console.log(`🌐 URL: http://localhost:${PORT}`);
-  console.log(`💚 Health Check: http://localhost:${PORT}/health`);
-  console.log(`📖 API Docs: http://localhost:${PORT}/`);
-  console.log('='.repeat(60) + '\n');
+  logger.info('\n' + '='.repeat(60));
+  logger.info('🚀 AI Business Bot Server запущен!');
+  logger.info('='.repeat(60));
+  logger.info(`📡 Сервер слушает порт: ${PORT}`);
+  logger.info(`🌐 URL: http://localhost:${PORT}`);
+  logger.info(`💚 Health Check: http://localhost:${PORT}/health`);
+  logger.info(`📖 API Docs: http://localhost:${PORT}/`);
+  logger.info(`📊 Metrics: http://localhost:${PORT}/metrics`);
+  logger.info('='.repeat(60) + '\n');
 
   // Автоматически запускаем планировщик при старте
   if (process.env.AUTO_START_SCHEDULER === 'true' && scheduler) {
-    console.log('⏰ Автозапуск планировщика...\n');
+    logger.info('⏰ Автозапуск планировщика...\n');
     try {
       await new Promise(resolve => setTimeout(resolve, 2000)); // Даем время на инициализацию
       scheduler.start();
       schedulerRunning = true;
-      console.log('✅ Планировщик успешно запущен\n');
+      logger.info('✅ Планировщик успешно запущен\n');
     } catch (error) {
-      console.error('❌ Ошибка автозапуска планировщика:', error.message);
-      console.error('⚠️ Планировщик можно запустить вручную через API\n');
+      logger.error('❌ Ошибка автозапуска планировщика:', error);
+      logger.warn('⚠️ Планировщик можно запустить вручную через API\n');
     }
   }
 });
 
 // Обработка неперехваченных ошибок
 process.on('uncaughtException', (error) => {
-  console.error('\n💥 Неперехваченное исключение:', error);
-  console.error('Stack:', error.stack);
-  console.error('⚠️ Продолжаю работу...\n');
+  logger.error('\n💥 Неперехваченное исключение:', error);
+  logger.warn('⚠️ Продолжаю работу...\n');
   // Не падаем, логируем и продолжаем
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('\n💥 Необработанное отклонение Promise:', reason);
-  console.error('Promise:', promise);
-  console.error('⚠️ Продолжаю работу...\n');
+  logger.error('\n💥 Необработанное отклонение Promise:', { reason, promise });
+  logger.warn('⚠️ Продолжаю работу...\n');
   // Не падаем, логируем и продолжаем
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('\n👋 Получен сигнал SIGTERM, останавливаю сервер...');
+  logger.info('\n👋 Получен сигнал SIGTERM, останавливаю сервер...');
   if (scheduler && schedulerRunning) {
     try {
       scheduler.stop();
-      console.log('⏸️  Планировщик остановлен');
+      logger.info('⏸️  Планировщик остановлен');
     } catch (error) {
-      console.error('⚠️ Ошибка остановки планировщика:', error.message);
+      logger.error('⚠️ Ошибка остановки планировщика:', error);
     }
   }
   server.close(() => {
-    console.log('✅ Сервер остановлен');
+    logger.info('✅ Сервер остановлен');
     process.exit(0);
   });
   
   // Принудительная остановка через 30 секунд
   setTimeout(() => {
-    console.error('❌ Принудительная остановка (timeout)');
+    logger.error('❌ Принудительная остановка (timeout)');
     process.exit(1);
   }, 30000);
 });
 
 process.on('SIGINT', () => {
-  console.log('\n\n👋 Получен сигнал SIGINT, останавливаю сервер...');
+  logger.info('\n\n👋 Получен сигнал SIGINT, останавливаю сервер...');
   if (scheduler && schedulerRunning) {
     try {
       scheduler.stop();
-      console.log('⏸️  Планировщик остановлен');
+      logger.info('⏸️  Планировщик остановлен');
     } catch (error) {
-      console.error('⚠️ Ошибка остановки планировщика:', error.message);
+      logger.error('⚠️ Ошибка остановки планировщика:', error);
     }
   }
   server.close(() => {
-    console.log('✅ Сервер остановлен');
+    logger.info('✅ Сервер остановлен');
     process.exit(0);
   });
   
   // Принудительная остановка через 30 секунд
   setTimeout(() => {
-    console.error('❌ Принудительная остановка (timeout)');
+    logger.error('❌ Принудительная остановка (timeout)');
     process.exit(1);
   }, 30000);
 });
@@ -415,14 +433,14 @@ process.on('SIGINT', () => {
 // Обработка ошибки занятого порта
 server.on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
-    console.error(`\n❌ Порт ${PORT} уже занят!`);
-    console.error('💡 Решение:');
-    console.error('   1. Остановите все процессы: pm2 delete all');
-    console.error('   2. Или измените порт в .env: PORT=3001');
-    console.error('   3. Или найдите процесс: lsof -i :3000 и убейте его\n');
+    logger.error(`\n❌ Порт ${PORT} уже занят!`);
+    logger.error('💡 Решение:');
+    logger.error('   1. Остановите все процессы: pm2 delete all');
+    logger.error('   2. Или измените порт в .env: PORT=3001');
+    logger.error('   3. Или найдите процесс: lsof -i :3000 и убейте его\n');
     process.exit(1);
   } else {
-    console.error('❌ Ошибка сервера:', error);
+    logger.error('❌ Ошибка сервера:', error);
     process.exit(1);
   }
 });

@@ -11,7 +11,11 @@
     "schedule": "node src/scheduler.js",
     "collect": "node src/collector.js",
     "dev": "node --watch src/index.js",
-    "test": "echo \"Running tests...\" && exit 0"
+    "test": "NODE_ENV=test mocha tests/**/*.test.js --timeout 10000",
+    "test:watch": "NODE_ENV=test mocha tests/**/*.test.js --watch",
+    "test:coverage": "NODE_ENV=test c8 mocha tests/**/*.test.js",
+    "lint": "eslint src/**/*.js server.js --fix",
+    "format": "prettier --write \"src/**/*.js\" \"server.js\""
   },
   "keywords": [
     "ai",
@@ -28,11 +32,26 @@
     "cheerio": "^1.1.2",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
     "form-data": "^4.0.0",
     "https-proxy-agent": "^7.0.6",
+    "joi": "^17.11.0",
     "node-cron": "^3.0.3",
     "openai": "^4.20.1",
+    "prom-client": "^15.1.0",
     "rss-parser": "^3.13.0",
+    "winston": "^3.11.0",
     "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "c8": "^9.0.0",
+    "chai": "^5.0.0",
+    "eslint": "^8.56.0",
+    "mocha": "^10.2.0",
+    "prettier": "^3.1.1",
+    "sinon": "^17.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
