@@ -266,15 +266,19 @@ export class AIBusinessNewsCollector {
       return [];
     }
 
-    // Берем больше статей для анализа (maxNewsItems или 20)
-    const candidateArticles = sortedArticles.slice(0, this.config.search.maxNewsItems || 20);
+    // Берем много статей для анализа (до 100)
+    const candidateArticles = sortedArticles.slice(0, this.config.search.maxNewsItems);
+
+    console.log(`📊 Анализирую ${candidateArticles.length} новостей для создания качественных постов...`);
 
     // Анализируем на достоверность и интересность
     const analyzedArticles = await this.newsAnalyzer.analyzeArticles(candidateArticles);
 
-    // Выбираем топ-3 лучших
-    const postsPerBatch = parseInt(process.env.POSTS_PER_BATCH) || 3;
+    // Выбираем лучшие статьи (минимум 12 для 3-х дневного плана)
+    const postsPerBatch = parseInt(process.env.POSTS_PER_BATCH) || 12;
     const topArticles = this.newsAnalyzer.selectTopArticles(analyzedArticles, postsPerBatch);
+
+    console.log(`✅ Отобрано ${topArticles.length} лучших новостей для контент-плана`);
 
     return topArticles;
   }
