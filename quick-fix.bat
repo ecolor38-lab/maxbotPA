@@ -13,3 +13,4 @@ echo pm2 restart ai-bot
 pause
 
 
+

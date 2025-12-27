@@ -9,7 +9,9 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 3001,
-      AUTO_START_SCHEDULER: 'true'
+      AUTO_START_SCHEDULER: 'true',
+      CRON_SCHEDULE_1: '0 * * * *',
+      POSTS_PER_BATCH: '1'
     }
   }]
 };

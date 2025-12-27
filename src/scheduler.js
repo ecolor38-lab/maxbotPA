@@ -15,23 +15,12 @@ class BotScheduler {
     const schedules = [];
 
     if (process.env.CRON_SCHEDULE_1) {
-      schedules.push({ time: process.env.CRON_SCHEDULE_1, name: 'Пост каждые 3 часа' });
-    }
-    if (process.env.CRON_SCHEDULE_2) {
-      schedules.push({ time: process.env.CRON_SCHEDULE_2, name: 'Дополнительный пост' });
-    }
-    if (process.env.CRON_SCHEDULE_3) {
-      schedules.push({ time: process.env.CRON_SCHEDULE_3, name: 'Дополнительный пост' });
+      schedules.push({ time: process.env.CRON_SCHEDULE_1, name: 'Автопостинг каждый час' });
     }
 
-    // Fallback на старое расписание
-    if (schedules.length === 0 && config.scheduler?.cronSchedule) {
-      schedules.push({ time: config.scheduler.cronSchedule, name: 'Ежедневный пост' });
-    }
-
-    // Дефолт: каждые 3 часа
+    // Дефолт: каждый час
     if (schedules.length === 0) {
-      schedules.push({ time: '0 */3 * * *', name: 'Пост каждые 3 часа' });
+      schedules.push({ time: '0 * * * *', name: 'Автопостинг каждый час' });
     }
 
     return schedules;
@@ -93,27 +82,21 @@ class BotScheduler {
   }
 
   async runScheduledPost() {
-    const postsPerBatch = parseInt(process.env.POSTS_PER_BATCH) || 3;
+    console.log('🔄 Сбор новостей и публикация...\n');
 
-    console.log(`📦 Публикация пакета (до ${postsPerBatch} постов)...\n`);
+    // Сначала собираем свежие новости
+    await this.collectAndPlan();
 
-    // Проверяем очередь
+    // Проверяем очередь после сбора
     const plan = await this.contentPlanner.loadPlan();
     const availablePosts = plan.queue.filter(p => p.status === 'pending');
 
     if (availablePosts.length === 0) {
-      console.log('📭 Очередь постов пуста, собираю новые новости...');
-      await this.collectAndPlan();
-
-      // Обновляем план после сбора
-      const updatedPlan = await this.contentPlanner.loadPlan();
-      const newPosts = updatedPlan.queue.filter(p => p.status === 'pending');
-
-      if (newPosts.length === 0) {
-        console.log('⚠️ Не удалось собрать новости для публикации');
-        return;
-      }
+      console.log('⚠️ Нет новостей для публикации');
+      return;
     }
+
+    const postsPerBatch = parseInt(process.env.POSTS_PER_BATCH) || 1;
 
     // Публикуем до postsPerBatch постов
     const postsToPublish = Math.min(postsPerBatch, availablePosts.length);
@@ -194,13 +177,8 @@ class BotScheduler {
   }
 
   scheduleNewsCollection() {
-    // Собираем новости каждые 3 часа
-    cron.schedule('0 */3 * * *', async () => {
-      console.log('\n🔄 Автоматический сбор новостей...\n');
-      await this.collectAndPlan();
-    });
-
-    console.log('✅ Автоматический сбор новостей настроен (каждые 3 часа)\n');
+    // Отключаем отдельный сбор - теперь собираем в runScheduledPost
+    console.log('✅ Сбор новостей происходит перед каждой публикацией\n');
   }
 
   async showPlanStats() {
