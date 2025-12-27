@@ -105,10 +105,11 @@ export class ContentPlanner {
 
       await fs.writeFile(this.publishedFile, JSON.stringify(published, null, 2), 'utf8');
     } catch (error) {
-      if (error.code === 'EACCES' || error.code === 'EPERM') {
-        const errorMsg = `Нет прав доступа для записи файла ${this.publishedFile}. ` +
-          `Проверьте права доступа файла или настройки Docker volume (если используется контейнер).`;
-        throw new Error(errorMsg);
+      if (error.code === 'EACCES' || error.code === 'EPERM' || error.code === 'EROFS') {
+        console.error(`❌ Нет прав на запись в ${this.publishedFile}`);
+        console.error('⚠️ Работаю в режиме без сохранения истории публикаций (ephemeral mode)');
+        // Не падаем, просто предупреждаем
+        return;
       }
       throw error;
     }

@@ -24,14 +24,25 @@ let scheduler = null;
 let bot = null;
 let contentPlanner = null;
 
-try {
-  bot = new AIBusinessBot();
-  scheduler = new BotScheduler();
-  contentPlanner = new ContentPlanner();
-  console.log('✅ Сервисы инициализированы');
-} catch (error) {
-  console.error('❌ Ошибка инициализации сервисов:', error.message);
+async function initializeServices() {
+  try {
+    console.log('🔄 Инициализация сервисов...');
+    bot = new AIBusinessBot();
+    scheduler = new BotScheduler();
+    contentPlanner = new ContentPlanner();
+    console.log('✅ Сервисы инициализированы');
+    return true;
+  } catch (error) {
+    console.error('❌ Ошибка инициализации сервисов:', error.message);
+    console.error('⚠️ Сервер запустится, но функциональность ограничена');
+    return false;
+  }
 }
+
+// Инициализируем сервисы
+initializeServices().catch(err => {
+  console.error('❌ Критическая ошибка инициализации:', err);
+});
 
 // ====================
 // HEALTH CHECK
@@ -316,7 +327,7 @@ app.use((req, res) => {
 // START SERVER
 // ====================
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', async () => {
   console.log('\n' + '='.repeat(60));
   console.log('🚀 AI Business Bot Server запущен!');
   console.log('='.repeat(60));
@@ -327,32 +338,93 @@ const server = app.listen(PORT, () => {
   console.log('='.repeat(60) + '\n');
 
   // Автоматически запускаем планировщик при старте
-  if (process.env.AUTO_START_SCHEDULER === 'true') {
+  if (process.env.AUTO_START_SCHEDULER === 'true' && scheduler) {
     console.log('⏰ Автозапуск планировщика...\n');
     try {
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Даем время на инициализацию
       scheduler.start();
       schedulerRunning = true;
+      console.log('✅ Планировщик успешно запущен\n');
     } catch (error) {
       console.error('❌ Ошибка автозапуска планировщика:', error.message);
+      console.error('⚠️ Планировщик можно запустить вручную через API\n');
     }
   }
+});
+
+// Обработка неперехваченных ошибок
+process.on('uncaughtException', (error) => {
+  console.error('\n💥 Неперехваченное исключение:', error);
+  console.error('Stack:', error.stack);
+  console.error('⚠️ Продолжаю работу...\n');
+  // Не падаем, логируем и продолжаем
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('\n💥 Необработанное отклонение Promise:', reason);
+  console.error('Promise:', promise);
+  console.error('⚠️ Продолжаю работу...\n');
+  // Не падаем, логируем и продолжаем
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('\n👋 Получен сигнал SIGTERM, останавливаю сервер...');
+  if (scheduler && schedulerRunning) {
+    try {
+      scheduler.stop();
+      console.log('⏸️  Планировщик остановлен');
+    } catch (error) {
+      console.error('⚠️ Ошибка остановки планировщика:', error.message);
+    }
+  }
   server.close(() => {
     console.log('✅ Сервер остановлен');
     process.exit(0);
   });
+  
+  // Принудительная остановка через 30 секунд
+  setTimeout(() => {
+    console.error('❌ Принудительная остановка (timeout)');
+    process.exit(1);
+  }, 30000);
 });
 
 process.on('SIGINT', () => {
   console.log('\n\n👋 Получен сигнал SIGINT, останавливаю сервер...');
+  if (scheduler && schedulerRunning) {
+    try {
+      scheduler.stop();
+      console.log('⏸️  Планировщик остановлен');
+    } catch (error) {
+      console.error('⚠️ Ошибка остановки планировщика:', error.message);
+    }
+  }
   server.close(() => {
     console.log('✅ Сервер остановлен');
     process.exit(0);
   });
+  
+  // Принудительная остановка через 30 секунд
+  setTimeout(() => {
+    console.error('❌ Принудительная остановка (timeout)');
+    process.exit(1);
+  }, 30000);
+});
+
+// Обработка ошибки занятого порта
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`\n❌ Порт ${PORT} уже занят!`);
+    console.error('💡 Решение:');
+    console.error('   1. Остановите все процессы: pm2 delete all');
+    console.error('   2. Или измените порт в .env: PORT=3001');
+    console.error('   3. Или найдите процесс: lsof -i :3000 и убейте его\n');
+    process.exit(1);
+  } else {
+    console.error('❌ Ошибка сервера:', error);
+    process.exit(1);
+  }
 });
 
 export default app;
