@@ -27,10 +27,10 @@ export class ImageGenerator {
   }
 
   async generateImage(prompt) {
-    console.log('🎨 Генерирую реалистичное изображение через Qwen AI...');
+    console.log('🎨 Генерирую реалистичное изображение...');
 
+    // Используем Pollinations.ai напрямую (быстрее и надежнее)
     try {
-      // Шаг 1: Создаем детальный реалистичный промпт
       let enhancedPrompt;
       if (this.anthropic) {
         enhancedPrompt = await this.generateRealisticPromptWithClaude(prompt);
@@ -41,24 +41,12 @@ export class ImageGenerator {
       console.log('✅ Реалистичный промпт создан');
       console.log(`📝 Промпт: ${enhancedPrompt.substring(0, 150)}...`);
 
-      // Шаг 2: Генерируем изображение через Qwen API
-      const imageUrl = await this.generateWithQwen(enhancedPrompt);
-
-      console.log('✅ Изображение сгенерировано через Qwen');
-
-      // Шаг 3: Скачиваем изображение
-      const imagePath = await this.downloadImage(imageUrl);
-
-      return {
-        url: imageUrl,
-        path: imagePath
-      };
+      // Генерируем через Pollinations (бесплатно и стабильно)
+      return await this.generateWithFallback(prompt);
+      
     } catch (error) {
       console.error('⚠️ Ошибка при генерации изображения:', error.message);
-      
-      // Fallback на бесплатный сервис если Qwen не доступен
-      console.log('🔄 Пробую альтернативный метод генерации...');
-      return await this.generateWithFallback(prompt);
+      return null;
     }
   }
 

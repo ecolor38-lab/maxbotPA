@@ -12,3 +12,4 @@ nano .env
 (добавьте QWEN_API_KEY=sk-a6509b0b95d1473696c7b1548deda5fe)
 pm2 restart ai-bot
 
+

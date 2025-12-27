@@ -16,3 +16,4 @@ echo Открываю .env в блокноте...
 notepad .env
 pause
 
+

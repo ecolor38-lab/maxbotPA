@@ -10,3 +10,4 @@ echo git pull origin main
 echo pm2 restart ai-bot
 pause
 
+
