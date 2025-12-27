@@ -14,10 +14,10 @@ export class ContentPlanner {
   getWritableDir() {
     // Приоритет директорий для разных окружений
     const possibleDirs = [
-      process.cwd(),                    // Текущая директория (локально)
-      '/data',                          // Docker volume (если смонтирован)
-      '/tmp/ai-bot',                    // Временная директория (Docker/Railway/Render)
-      path.join(os.tmpdir(), 'ai-bot')  // Системная временная директория
+      process.cwd(), // Текущая директория (локально)
+      '/data', // Docker volume (если смонтирован)
+      '/tmp/ai-bot', // Временная директория (Docker/Railway/Render)
+      path.join(os.tmpdir(), 'ai-bot') // Системная временная директория
     ];
 
     // Проверяем какая директория доступна для записи
@@ -49,7 +49,7 @@ export class ContentPlanner {
         queue: [],
         lastUpdated: new Date().toISOString(),
         settings: {
-          postsPerDay: 1,  // 1 новость = 1 пост (публикация каждые 3 часа)
+          postsPerDay: 1, // 1 новость = 1 пост (публикация каждые 3 часа)
           minArticlesPerPost: 1,
           maxArticlesPerPost: 1
         }
@@ -118,27 +118,32 @@ export class ContentPlanner {
   async addArticlesToPlan(articles) {
     const plan = await this.loadPlan();
     const published = await this.loadPublished();
-    
+
     // Получаем все URL которые уже были опубликованы
-    const publishedUrls = new Set(published.posts.map(p => p.articles?.map(a => a.url)).flat().filter(Boolean));
-    
+    const publishedUrls = new Set(
+      published.posts
+        .map((p) => p.articles?.map((a) => a.url))
+        .flat()
+        .filter(Boolean)
+    );
+
     // Получаем URL из текущего плана
-    const plannedUrls = new Set(plan.queue.flatMap(p => p.articles.map(a => a.url)));
-    
+    const plannedUrls = new Set(plan.queue.flatMap((p) => p.articles.map((a) => a.url)));
+
     // Фильтруем дубликаты
-    const uniqueArticles = articles.filter(article => {
+    const uniqueArticles = articles.filter((article) => {
       const isDuplicate = publishedUrls.has(article.url) || plannedUrls.has(article.url);
       if (isDuplicate) {
         console.log(`   🔄 Дубликат пропущен: ${article.title.substring(0, 50)}...`);
       }
       return !isDuplicate;
     });
-    
+
     if (uniqueArticles.length < articles.length) {
       console.log(`\n✅ Отфильтровано ${articles.length - uniqueArticles.length} дубликатов`);
       console.log(`📝 Новых уникальных новостей: ${uniqueArticles.length}`);
     }
-    
+
     articles = uniqueArticles;
 
     // Группируем статьи по категориям
@@ -148,7 +153,7 @@ export class ContentPlanner {
       general: []
     };
 
-    articles.forEach(article => {
+    articles.forEach((article) => {
       const category = article.category || 'general';
       if (byCategory[category]) {
         byCategory[category].push(article);
@@ -176,12 +181,14 @@ export class ContentPlanner {
     const posts = [];
 
     // Новая логика: 1 новость = 1 пост
-    console.log(`📋 Создаю ${articles.length} постов из ${articles.length} новостей (1 новость = 1 пост)`);
+    console.log(
+      `📋 Создаю ${articles.length} постов из ${articles.length} новостей (1 новость = 1 пост)`
+    );
 
     articles.forEach((article, index) => {
       posts.push({
         id: Date.now() + index,
-        articles: [article],  // Один пост содержит одну новость
+        articles: [article], // Один пост содержит одну новость
         scheduledFor: null,
         status: 'pending',
         createdAt: new Date().toISOString()
@@ -196,7 +203,7 @@ export class ContentPlanner {
     const plan = await this.loadPlan();
 
     // Находим первый пост со статусом pending
-    const nextPost = plan.queue.find(post => post.status === 'pending');
+    const nextPost = plan.queue.find((post) => post.status === 'pending');
 
     if (!nextPost) {
       console.log('⚠️ В очереди нет постов для публикации');
@@ -211,7 +218,7 @@ export class ContentPlanner {
     const published = await this.loadPublished();
 
     // Обновляем статус в плане
-    const post = plan.queue.find(p => p.id === postId);
+    const post = plan.queue.find((p) => p.id === postId);
     if (post) {
       post.status = 'published';
       post.publishedAt = new Date().toISOString();
@@ -238,8 +245,8 @@ export class ContentPlanner {
     const plan = await this.loadPlan();
     const published = await this.loadPublished();
 
-    const pending = plan.queue.filter(p => p.status === 'pending').length;
-    const publishedCount = plan.queue.filter(p => p.status === 'published').length;
+    const pending = plan.queue.filter((p) => p.status === 'pending').length;
+    const publishedCount = plan.queue.filter((p) => p.status === 'published').length;
 
     return {
       totalInQueue: plan.queue.length,
@@ -259,7 +266,7 @@ export class ContentPlanner {
     const originalLength = plan.queue.length;
 
     // Удаляем опубликованные посты старше N дней
-    plan.queue = plan.queue.filter(post => {
+    plan.queue = plan.queue.filter((post) => {
       if (post.status !== 'published') return true;
 
       const publishedAt = new Date(post.publishedAt);

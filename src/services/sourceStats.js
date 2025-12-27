@@ -10,12 +10,7 @@ export class SourceStats {
   }
 
   getWritableDir() {
-    const possibleDirs = [
-      process.cwd(),
-      '/data',
-      '/tmp/ai-bot',
-      path.join(os.tmpdir(), 'ai-bot')
-    ];
+    const possibleDirs = [process.cwd(), '/data', '/tmp/ai-bot', path.join(os.tmpdir(), 'ai-bot')];
 
     for (const dir of possibleDirs) {
       try {
@@ -83,7 +78,7 @@ export class SourceStats {
     stats.lastSuccess = new Date().toISOString();
     stats.lastAttempt = new Date().toISOString();
     stats.consecutiveFailures = 0;
-    
+
     // Если источник был отключен, но дал результат - включаем обратно
     if (!stats.enabled) {
       stats.enabled = true;
@@ -97,11 +92,13 @@ export class SourceStats {
     stats.totalAttempts++;
     stats.lastAttempt = new Date().toISOString();
     stats.consecutiveFailures++;
-    
+
     // Если 5 неудач подряд - отключаем источник
     if (stats.consecutiveFailures >= 5) {
       stats.enabled = false;
-      console.log(`   ❌ Источник "${sourceName}" отключен (${stats.consecutiveFailures} неудач подряд)`);
+      console.log(
+        `   ❌ Источник "${sourceName}" отключен (${stats.consecutiveFailures} неудач подряд)`
+      );
     }
   }
 
@@ -139,12 +136,12 @@ export class SourceStats {
   // Получить статистику для отчета
   getReport() {
     const sources = Object.values(this.stats.sources);
-    
-    const active = sources.filter(s => s.enabled).length;
-    const disabled = sources.filter(s => !s.enabled).length;
-    
+
+    const active = sources.filter((s) => s.enabled).length;
+    const disabled = sources.filter((s) => !s.enabled).length;
+
     const topSources = sources
-      .filter(s => s.enabled && s.totalAttempts > 0)
+      .filter((s) => s.enabled && s.totalAttempts > 0)
       .sort((a, b) => {
         const aRate = a.successfulAttempts / a.totalAttempts;
         const bRate = b.successfulAttempts / b.totalAttempts;
@@ -156,7 +153,7 @@ export class SourceStats {
       totalSources: sources.length,
       activeSources: active,
       disabledSources: disabled,
-      topSources: topSources.map(s => ({
+      topSources: topSources.map((s) => ({
         name: s.name,
         successRate: Math.round((s.successfulAttempts / s.totalAttempts) * 100),
         articlesFound: s.articlesFound,
@@ -170,14 +167,15 @@ export class SourceStats {
     const report = this.getReport();
     console.log(`\n📊 Статистика источников:`);
     console.log(`   Активных: ${report.activeSources} | Отключенных: ${report.disabledSources}`);
-    
+
     if (report.topSources.length > 0) {
       console.log(`\n🏆 Топ-5 источников:`);
       report.topSources.forEach((s, i) => {
-        console.log(`   ${i + 1}. ${s.name} - ${s.successRate}% успеха (${s.articlesFound} статей)`);
+        console.log(
+          `   ${i + 1}. ${s.name} - ${s.successRate}% успеха (${s.articlesFound} статей)`
+        );
       });
     }
     console.log('');
   }
 }
-

@@ -36,7 +36,7 @@ export class TelegramPublisherNative {
       let postData;
 
       // Приоритет: ТОЛЬКО локальный файл
-      if (imagePath && await this.fileExists(imagePath)) {
+      if (imagePath && (await this.fileExists(imagePath))) {
         console.log('📸 Отправляю изображение с текстом из файла...');
         postData = await this.publishWithImage(fullText, imagePath);
       } else {
@@ -73,7 +73,9 @@ export class TelegramPublisherNative {
     // Telegram caption лимит: 1024 символа
     // Если всё равно не влезает - обрезаем хештеги
     if (fullText.length > 1020) {
-      const withoutHashtags = postText + (articles && articles.length > 0 ? `\n\n📚 [Источники](${articles[0].url})` : '');
+      const withoutHashtags =
+        postText +
+        (articles && articles.length > 0 ? `\n\n📚 [Источники](${articles[0].url})` : '');
       if (withoutHashtags.length <= 1020) {
         // Убираем часть хештегов
         const hashtagsArray = hashtags.split(' ');
@@ -303,7 +305,7 @@ export class TelegramPublisherNative {
   async saveToFile(text, imagePath = null) {
     try {
       const postsDir = path.join(process.cwd(), 'posts');
-      
+
       // Пытаемся создать папку, игнорируем ошибки прав доступа
       try {
         await fs.mkdir(postsDir, { recursive: true });

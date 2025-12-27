@@ -15,11 +15,11 @@ const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: 'HH:mm:ss' }),
   winston.format.printf(({ timestamp, level, message, ...metadata }) => {
     let msg = `${timestamp} [${level}] ${message}`;
-    
+
     if (Object.keys(metadata).length > 0) {
       msg += ` ${JSON.stringify(metadata)}`;
     }
-    
+
     return msg;
   })
 );
@@ -169,7 +169,3 @@ export const createModuleLogger = (moduleName) => {
 };
 
 export default logger;
-
-
-
-

@@ -32,7 +32,9 @@ class NewsCollector {
       console.log('📰 Список новостей:');
       articles.forEach((article, index) => {
         console.log(`   ${index + 1}. ${article.title}`);
-        console.log(`      Источник: ${article.source} | ${article.pubDate.toLocaleDateString('ru-RU')}`);
+        console.log(
+          `      Источник: ${article.source} | ${article.pubDate.toLocaleDateString('ru-RU')}`
+        );
       });
 
       console.log('');
@@ -65,7 +67,9 @@ class NewsCollector {
         console.log(`\n⚠️ В плане ${stats.pending} постов, нужно минимум ${minPosts} (на неделю)`);
         console.log('💡 Рекомендуется собрать еще новостей для накопления контента');
       } else {
-        console.log(`\n✅ Контент-план заполнен! Достаточно постов на неделю+ (${stats.pending}/${minPosts})`);
+        console.log(
+          `\n✅ Контент-план заполнен! Достаточно постов на неделю+ (${stats.pending}/${minPosts})`
+        );
       }
 
       console.log('\n✅ Сбор новостей завершен!');
@@ -80,7 +84,7 @@ class NewsCollector {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const collector = new NewsCollector();
-  
+
   // Graceful shutdown handlers
   process.on('SIGTERM', () => {
     console.log('\n👋 Получен SIGTERM, завершаю работу...');
@@ -91,8 +95,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('\n👋 Получен SIGINT (Ctrl+C), завершаю работу...');
     process.exit(0);
   });
-  
-  collector.run()
+
+  collector
+    .run()
     .then(() => {
       console.log('\n👋 Завершение работы');
       process.exit(0);

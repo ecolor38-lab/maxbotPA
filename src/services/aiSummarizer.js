@@ -6,20 +6,29 @@ export class AISummarizer {
     this.config = config;
     // Гарантируем, что язык установлен на русский по умолчанию
     if (!this.config.language || (this.config.language !== 'ru' && this.config.language !== 'en')) {
-      console.log(`⚠️ Язык не установлен или неверный (${this.config.language}), использую 'ru' по умолчанию`);
+      console.log(
+        `⚠️ Язык не установлен или неверный (${this.config.language}), использую 'ru' по умолчанию`
+      );
       this.config.language = 'ru';
     }
-    this.anthropic = config.anthropic.apiKey ? new Anthropic({ apiKey: config.anthropic.apiKey }) : null;
+    this.anthropic = config.anthropic.apiKey
+      ? new Anthropic({ apiKey: config.anthropic.apiKey })
+      : null;
     this.openai = config.openai.apiKey ? new OpenAI({ apiKey: config.openai.apiKey }) : null;
   }
 
   async generateSummary(articles) {
     console.log('🤖 Генерирую саммари из собранных статей...');
-    console.log(`🌍 Язык генерации: ${this.config.language || 'не установлен (используется ru по умолчанию)'}`);
+    console.log(
+      `🌍 Язык генерации: ${this.config.language || 'не установлен (используется ru по умолчанию)'}`
+    );
 
-    const articlesText = articles.map((article, index) =>
-      `${index + 1}. ${article.title}\n   Источник: ${article.source}\n   ${article.snippet || ''}\n`
-    ).join('\n');
+    const articlesText = articles
+      .map(
+        (article, index) =>
+          `${index + 1}. ${article.title}\n   Источник: ${article.source}\n   ${article.snippet || ''}\n`
+      )
+      .join('\n');
 
     const prompt = this.createPrompt(articlesText);
 
@@ -38,7 +47,7 @@ export class AISummarizer {
       if (this.config.language === 'ru') {
         console.log('🇷🇺 Язык установлен на русский, проверяю и гарантирую русский текст...');
         summary = await this.ensureRussianLanguage(summary);
-        
+
         // Дополнительная проверка после перевода - если всё ещё много английского, переводим еще раз
         const finalCheck = await this.ensureRussianLanguage(summary);
         if (finalCheck !== summary) {
@@ -120,7 +129,7 @@ Return only the post text.`;
   async generateWithClaude(prompt) {
     try {
       const isRussian = this.config.language === 'ru';
-      const systemMessage = isRussian 
+      const systemMessage = isRussian
         ? `🇷🇺 ТЫ ПРОФЕССИОНАЛЬНЫЙ РЕДАКТОР РОССИЙСКОГО ДЕЛОВОГО TELEGRAM-КАНАЛА.
 
 КРИТИЧЕСКИ ВАЖНО - НАРУШЕНИЕ НЕДОПУСТИМО:
@@ -139,15 +148,17 @@ Return only the post text.`;
 Если получаешь английский текст - ОБЯЗАТЕЛЬНО переведи его на русский.
 ВЕСЬ твой ответ должен быть на РУССКОМ языке.`
         : 'You are a business editor. Write ONLY in English.';
-      
+
       const message = await this.anthropic.messages.create({
         model: this.config.anthropic.model,
         max_tokens: 2000,
         system: systemMessage,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
       });
 
       return message.content[0].text;
@@ -179,16 +190,19 @@ Return only the post text.`;
 Если получаешь английский текст - ОБЯЗАТЕЛЬНО переведи его на русский.
 ВЕСЬ твой ответ должен быть на РУССКОМ языке.`
         : 'You are an expert in AI technologies and business automation. Write ONLY in English.';
-      
+
       const completion = await this.openai.chat.completions.create({
         model: this.config.openai.model,
-        messages: [{
-          role: 'system',
-          content: systemMessage
-        }, {
-          role: 'user',
-          content: prompt
-        }],
+        messages: [
+          {
+            role: 'system',
+            content: systemMessage
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
         max_tokens: 2000,
         temperature: 0.7
       });
@@ -236,11 +250,26 @@ ${postText}
 
   extractKeywords(text) {
     const aiBusinessKeywords = [
-      'чат-бот', 'chatbot', 'AI', 'ИИ',
-      'автоматизация', 'automation', 'нейросеть', 'neural network',
-      'машинное обучение', 'machine learning', 'GPT', 'LLM',
-      'контент-маркетинг', 'content marketing', 'бизнес', 'business',
-      'агент', 'agent', 'копирайтинг', 'copywriting'
+      'чат-бот',
+      'chatbot',
+      'AI',
+      'ИИ',
+      'автоматизация',
+      'automation',
+      'нейросеть',
+      'neural network',
+      'машинное обучение',
+      'machine learning',
+      'GPT',
+      'LLM',
+      'контент-маркетинг',
+      'content marketing',
+      'бизнес',
+      'business',
+      'агент',
+      'agent',
+      'копирайтинг',
+      'copywriting'
     ];
 
     const found = [];
@@ -274,33 +303,47 @@ ${postText}
     // Проверяем, есть ли в тексте английские слова (более строгая проверка)
     const englishWordsPattern = /\b[a-zA-Z]{3,}\b/g;
     const englishWords = text.match(englishWordsPattern) || [];
-    
+
     // Исключаем допустимые английские термины
-    const allowedTerms = ['AI', 'GPT', 'ChatGPT', 'Claude', 'API', 'LLM', 'DALL-E', 'OpenAI', 'CEO', 'CTO'];
-    const englishWordsFiltered = englishWords.filter(word => 
-      !allowedTerms.some(term => term.toLowerCase() === word.toLowerCase())
+    const allowedTerms = [
+      'AI',
+      'GPT',
+      'ChatGPT',
+      'Claude',
+      'API',
+      'LLM',
+      'DALL-E',
+      'OpenAI',
+      'CEO',
+      'CTO'
+    ];
+    const englishWordsFiltered = englishWords.filter(
+      (word) => !allowedTerms.some((term) => term.toLowerCase() === word.toLowerCase())
     );
 
     // Проверяем, начинается ли текст с английских слов (признак английского текста)
     const startsWithEnglish = /^[a-zA-Z]/.test(text.trim());
-    
+
     // Проверяем процент английских слов от общего количества
-    const totalWords = text.split(/\s+/).filter(w => w.length > 0).length;
+    const totalWords = text.split(/\s+/).filter((w) => w.length > 0).length;
     const englishRatio = totalWords > 0 ? englishWordsFiltered.length / totalWords : 0;
 
     // Проверяем наличие кириллицы
     const hasCyrillic = /[а-яА-ЯёЁ]/.test(text);
-    
+
     // Более строгая проверка: переводим если:
     // 1. Английских слов больше 15% (вместо 30%)
     // 2. Текст начинается с английской буквы И нет кириллицы
     // 3. Нет кириллицы вообще (вероятно весь текст на английском)
-    
-    const needsTranslation = englishRatio > 0.15 || 
-                            (startsWithEnglish && !hasCyrillic) || 
-                            (!hasCyrillic && englishWordsFiltered.length > 5);
 
-    console.log(`📊 Проверка языка: английских слов ${englishWordsFiltered.length} из ${totalWords} (${(englishRatio * 100).toFixed(1)}%), кириллица: ${hasCyrillic ? 'есть' : 'нет'}`);
+    const needsTranslation =
+      englishRatio > 0.15 ||
+      (startsWithEnglish && !hasCyrillic) ||
+      (!hasCyrillic && englishWordsFiltered.length > 5);
+
+    console.log(
+      `📊 Проверка языка: английских слов ${englishWordsFiltered.length} из ${totalWords} (${(englishRatio * 100).toFixed(1)}%), кириллица: ${hasCyrillic ? 'есть' : 'нет'}`
+    );
 
     if (needsTranslation) {
       console.log('🔄 Обнаружен английский текст, перевожу на русский...');
@@ -334,23 +377,30 @@ ${text}
         const message = await this.anthropic.messages.create({
           model: this.config.anthropic.model,
           max_tokens: 2000,
-          system: 'Ты профессиональный переводчик. ТВОЯ ЕДИНСТВЕННАЯ ЗАДАЧА - перевести текст на РУССКИЙ язык. ВЕСЬ текст должен быть на русском. Оставляй только термины AI, GPT, ChatGPT, Claude, API, LLM на английском. ВСЁ остальное переводи на русский. НЕ добавляй комментарии, возвращай ТОЛЬКО перевод.',
-          messages: [{
-            role: 'user',
-            content: translatePrompt
-          }]
+          system:
+            'Ты профессиональный переводчик. ТВОЯ ЕДИНСТВЕННАЯ ЗАДАЧА - перевести текст на РУССКИЙ язык. ВЕСЬ текст должен быть на русском. Оставляй только термины AI, GPT, ChatGPT, Claude, API, LLM на английском. ВСЁ остальное переводи на русский. НЕ добавляй комментарии, возвращай ТОЛЬКО перевод.',
+          messages: [
+            {
+              role: 'user',
+              content: translatePrompt
+            }
+          ]
         });
         translated = message.content[0].text;
       } else if (this.openai) {
         const completion = await this.openai.chat.completions.create({
           model: this.config.openai.model,
-          messages: [{
-            role: 'system',
-            content: 'Ты профессиональный переводчик. ТВОЯ ЕДИНСТВЕННАЯ ЗАДАЧА - перевести текст на РУССКИЙ язык. ВЕСЬ текст должен быть на русском. Оставляй только термины AI, GPT, ChatGPT, Claude, API, LLM на английском. ВСЁ остальное переводи на русский. НЕ добавляй комментарии, возвращай ТОЛЬКО перевод.'
-          }, {
-            role: 'user',
-            content: translatePrompt
-          }],
+          messages: [
+            {
+              role: 'system',
+              content:
+                'Ты профессиональный переводчик. ТВОЯ ЕДИНСТВЕННАЯ ЗАДАЧА - перевести текст на РУССКИЙ язык. ВЕСЬ текст должен быть на русском. Оставляй только термины AI, GPT, ChatGPT, Claude, API, LLM на английском. ВСЁ остальное переводи на русский. НЕ добавляй комментарии, возвращай ТОЛЬКО перевод.'
+            },
+            {
+              role: 'user',
+              content: translatePrompt
+            }
+          ],
           max_tokens: 2000,
           temperature: 0.2
         });

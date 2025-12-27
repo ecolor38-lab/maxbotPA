@@ -57,27 +57,27 @@ export class HashtagGenerator {
 
     // Проверяем и нормализуем язык с fallback на 'ru'
     let lang = this.config?.language || 'ru';
-    
+
     // Убедимся что язык поддерживается
     if (!this.baseHashtags[lang]) {
       console.log(`⚠️ Язык "${lang}" не поддерживается, использую "ru"`);
       lang = 'ru';
     }
-    
+
     const hashtags = new Set();
 
     const baseCount = 3;
     // Добавляем дополнительную проверку что baseHashtags[lang] существует и это массив
     const baseHashtagsArray = this.baseHashtags[lang] || this.baseHashtags['ru'] || [];
     const selectedBase = baseHashtagsArray.slice(0, baseCount);
-    selectedBase.forEach(tag => hashtags.add(tag));
+    selectedBase.forEach((tag) => hashtags.add(tag));
 
     const topicalCount = 2;
     const relevantTopical = this.selectRelevantTopicalHashtags(postText, articles, lang) || [];
-    relevantTopical.slice(0, topicalCount).forEach(tag => hashtags.add(tag));
+    relevantTopical.slice(0, topicalCount).forEach((tag) => hashtags.add(tag));
 
     const trending = this.addTrendingHashtags(lang) || [];
-    trending.slice(0, 1).forEach(tag => hashtags.add(tag)); // Только 1 трендовый
+    trending.slice(0, 1).forEach((tag) => hashtags.add(tag)); // Только 1 трендовый
 
     const finalHashtags = Array.from(hashtags).slice(0, 6);
 
@@ -90,28 +90,28 @@ export class HashtagGenerator {
     // Убедимся что postText не undefined
     const text = (postText || '').toLowerCase();
     const relevant = [];
-    
+
     // Нормализуем язык
     const normalizedLang = this.baseHashtags[lang] ? lang : 'ru';
 
     const keywords = {
-      'gpt': ['#GPT4', '#GPT4'],
-      'chatgpt': ['#ChatGPT', '#ChatGPT'],
-      'claude': ['#Claude', '#Claude'],
+      gpt: ['#GPT4', '#GPT4'],
+      chatgpt: ['#ChatGPT', '#ChatGPT'],
+      claude: ['#Claude', '#Claude'],
       'чат-бот': ['#ЧатБот', '#Chatbot'],
-      'chatbot': ['#ЧатБот', '#Chatbot'],
-      'нейросет': ['#Нейросети', '#MachineLearning'],
-      'neural': ['#Нейросети', '#MachineLearning'],
-      'контент': ['#КонтентМаркетинг', '#ContentMarketing'],
-      'content': ['#КонтентМаркетинг', '#ContentMarketing'],
-      'агент': ['#AIАгент', '#AIAgent'],
-      'agent': ['#AIАгент', '#AIAgent'],
+      chatbot: ['#ЧатБот', '#Chatbot'],
+      нейросет: ['#Нейросети', '#MachineLearning'],
+      neural: ['#Нейросети', '#MachineLearning'],
+      контент: ['#КонтентМаркетинг', '#ContentMarketing'],
+      content: ['#КонтентМаркетинг', '#ContentMarketing'],
+      агент: ['#AIАгент', '#AIAgent'],
+      agent: ['#AIАгент', '#AIAgent'],
       'машинное обучение': ['#МашинноеОбучение', '#MachineLearning'],
       'machine learning': ['#МашинноеОбучение', '#MachineLearning'],
-      'автоматизац': ['#БизнесАвтоматизация', '#Automation'],
-      'automation': ['#БизнесАвтоматизация', '#Automation'],
-      'стартап': ['#Стартап', '#Startup'],
-      'startup': ['#Стартап', '#Startup']
+      автоматизац: ['#БизнесАвтоматизация', '#Automation'],
+      automation: ['#БизнесАвтоматизация', '#Automation'],
+      стартап: ['#Стартап', '#Startup'],
+      startup: ['#Стартап', '#Startup']
     };
 
     for (const [keyword, tags] of Object.entries(keywords)) {
@@ -125,7 +125,9 @@ export class HashtagGenerator {
 
     if (relevant.length < 3) {
       const fallback = this.topicalHashtags[normalizedLang] || this.topicalHashtags['ru'] || [];
-      const filtered = Array.isArray(fallback) ? fallback.filter(tag => !relevant.includes(tag)) : [];
+      const filtered = Array.isArray(fallback)
+        ? fallback.filter((tag) => !relevant.includes(tag))
+        : [];
       relevant.push(...filtered.slice(0, 3 - relevant.length));
     }
 
@@ -135,9 +137,9 @@ export class HashtagGenerator {
   addTrendingHashtags(lang) {
     const _year = new Date().getFullYear(); // eslint-disable-line no-unused-vars
     const trending = [];
-    
+
     // Нормализуем язык с fallback
-    const normalizedLang = (lang === 'ru' || lang === 'en') ? lang : 'ru';
+    const normalizedLang = lang === 'ru' || lang === 'en' ? lang : 'ru';
 
     if (normalizedLang === 'ru') {
       trending.push('#ИИ2025');

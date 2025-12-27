@@ -33,7 +33,9 @@ export class NewsAnalyzer {
           });
 
           console.log(`   ✅ ${article.title.substring(0, 50)}...`);
-          console.log(`      Достоверность: ${analysis.trustScore}/10 | Интересность: ${analysis.interestScore}/10`);
+          console.log(
+            `      Достоверность: ${analysis.trustScore}/10 | Интересность: ${analysis.interestScore}/10`
+          );
         } else {
           console.log(`   ❌ ОТКЛОНЕНО: ${article.title.substring(0, 50)}...`);
           console.log(`      Причина: ${analysis.reason}`);
@@ -54,7 +56,9 @@ export class NewsAnalyzer {
     // Сортируем по общему скору (достоверность + интересность)
     analyzed.sort((a, b) => b.totalScore - a.totalScore);
 
-    console.log(`\n📊 Результат анализа: ${analyzed.length} из ${articles.length} новостей прошли проверку`);
+    console.log(
+      `\n📊 Результат анализа: ${analyzed.length} из ${articles.length} новостей прошли проверку`
+    );
 
     return analyzed;
   }
@@ -74,15 +78,16 @@ export class NewsAnalyzer {
       const response = await this.anthropic.messages.create({
         model: this.config.anthropic.model,
         max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
       });
 
       const result = response.content[0].text;
       return this.parseAnalysisResult(result);
-
     } catch (error) {
       console.error('Ошибка AI анализа:', error.message);
       return this.basicAnalysis(article);
@@ -159,13 +164,13 @@ export class NewsAnalyzer {
       const clickbaitWords = ['шокирующ', 'невероят', 'сенсац', 'взорвал', 'такого еще не было'];
       const title = article.title.toLowerCase();
 
-      if (clickbaitWords.some(word => title.includes(word))) {
+      if (clickbaitWords.some((word) => title.includes(word))) {
         trustScore -= 2;
       }
 
       // Бонус за известные источники
       const trustedSources = ['TechCrunch', 'VentureBeat', 'MIT Technology Review'];
-      if (trustedSources.some(source => article.source.includes(source))) {
+      if (trustedSources.some((source) => article.source.includes(source))) {
         trustScore += 1;
       }
 

@@ -207,18 +207,18 @@ export class AIBusinessNewsCollector {
     this.sourceStats.printBrief();
 
     const sources = this.getSources();
-    
+
     // Фильтруем только активные источники
-    const activeSources = sources.rss.filter(source => this.sourceStats.isEnabled(source.name));
+    const activeSources = sources.rss.filter((source) => this.sourceStats.isEnabled(source.name));
     const disabledCount = sources.rss.length - activeSources.length;
-    
+
     if (disabledCount > 0) {
       console.log(`⚠️ Пропущено ${disabledCount} неактивных источников\n`);
     }
 
     // Сортируем по эффективности
     const sortedSources = this.sourceStats.sortSourcesByEffectiveness(activeSources);
-    
+
     const allArticles = [];
     let successfulSources = 0;
     let failedSources = 0;
@@ -229,7 +229,7 @@ export class AIBusinessNewsCollector {
         const successRate = this.sourceStats.getSuccessRate(source.name);
         const ratePercent = Math.round(successRate * 100);
         console.log(`📡 Парсинг: ${source.name} (успешность: ${ratePercent}%)...`);
-        
+
         // eslint-disable-next-line no-await-in-loop
         const articles = await this.parseRSSFeed(source);
 
@@ -254,7 +254,9 @@ export class AIBusinessNewsCollector {
     // Сохраняем статистику
     await this.sourceStats.save();
 
-    console.log(`\n📊 Обработано источников: ${successfulSources} успешно, ${failedSources} с ошибками`);
+    console.log(
+      `\n📊 Обработано источников: ${successfulSources} успешно, ${failedSources} с ошибками`
+    );
 
     // Фильтруем и сортируем
     const filteredArticles = this.filterArticles(allArticles);
@@ -271,7 +273,9 @@ export class AIBusinessNewsCollector {
     const maxItems = Math.min(sortedArticles.length, 100);
     const candidateArticles = sortedArticles.slice(0, maxItems);
 
-    console.log(`📊 Анализирую ${candidateArticles.length} новостей из ${sortedArticles.length} для создания качественных постов...`);
+    console.log(
+      `📊 Анализирую ${candidateArticles.length} новостей из ${sortedArticles.length} для создания качественных постов...`
+    );
 
     // Анализируем на достоверность и интересность
     const analyzedArticles = await this.newsAnalyzer.analyzeArticles(candidateArticles);
@@ -280,7 +284,9 @@ export class AIBusinessNewsCollector {
     const postsPerBatch = parseInt(process.env.POSTS_PER_BATCH) || 21;
     const topArticles = this.newsAnalyzer.selectTopArticles(analyzedArticles, postsPerBatch);
 
-    console.log(`✅ Отобрано ${topArticles.length} лучших новостей для контент-плана (цель: ${postsPerBatch} на неделю)`);
+    console.log(
+      `✅ Отобрано ${topArticles.length} лучших новостей для контент-плана (цель: ${postsPerBatch} на неделю)`
+    );
 
     return topArticles;
   }
@@ -318,38 +324,62 @@ export class AIBusinessNewsCollector {
 
     // Ключевые слова для AI бизнеса
     const aiBusinessKeywords = [
-      'chatbot', 'чат-бот', 'чатбот',
-      'ai agent', 'ai агент', 'ии агент',
-      'automation', 'автоматизация',
-      'machine learning', 'машинное обучение',
-      'deep learning', 'глубокое обучение',
-      'gpt', 'llm', 'large language model',
-      'ai solution', 'ai решение',
-      'artificial intelligence', 'искусственный интеллект',
-      'neural network', 'нейросеть', 'нейронная сеть'
+      'chatbot',
+      'чат-бот',
+      'чатбот',
+      'ai agent',
+      'ai агент',
+      'ии агент',
+      'automation',
+      'автоматизация',
+      'machine learning',
+      'машинное обучение',
+      'deep learning',
+      'глубокое обучение',
+      'gpt',
+      'llm',
+      'large language model',
+      'ai solution',
+      'ai решение',
+      'artificial intelligence',
+      'искусственный интеллект',
+      'neural network',
+      'нейросеть',
+      'нейронная сеть'
     ];
 
     const contentMarketingKeywords = [
-      'content marketing', 'контент-маркетинг',
-      'ai content', 'ai контент',
-      'copywriting', 'копирайтинг',
-      'seo', 'content generation',
-      'marketing automation', 'маркетинговая автоматизация'
+      'content marketing',
+      'контент-маркетинг',
+      'ai content',
+      'ai контент',
+      'copywriting',
+      'копирайтинг',
+      'seo',
+      'content generation',
+      'marketing automation',
+      'маркетинговая автоматизация'
     ];
 
     const businessKeywords = [
-      'business automation', 'бизнес автоматизация',
-      'enterprise ai', 'корпоративный ai',
-      'ai startup', 'ai стартап',
-      'ai tools', 'ai инструменты',
-      'productivity', 'продуктивность',
-      'workflow', 'рабочий процесс'
+      'business automation',
+      'бизнес автоматизация',
+      'enterprise ai',
+      'корпоративный ai',
+      'ai startup',
+      'ai стартап',
+      'ai tools',
+      'ai инструменты',
+      'productivity',
+      'продуктивность',
+      'workflow',
+      'рабочий процесс'
     ];
 
     // Проверяем наличие ключевых слов
-    const hasAIBusiness = aiBusinessKeywords.some(kw => text.includes(kw));
-    const hasContentMarketing = contentMarketingKeywords.some(kw => text.includes(kw));
-    const hasBusiness = businessKeywords.some(kw => text.includes(kw));
+    const hasAIBusiness = aiBusinessKeywords.some((kw) => text.includes(kw));
+    const hasContentMarketing = contentMarketingKeywords.some((kw) => text.includes(kw));
+    const hasBusiness = businessKeywords.some((kw) => text.includes(kw));
 
     return hasAIBusiness || hasContentMarketing || hasBusiness;
   }
@@ -359,9 +389,11 @@ export class AIBusinessNewsCollector {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysBack);
 
-    console.log(`📅 Фильтрация новостей: только за последние ${daysBack} дней (с ${cutoffDate.toLocaleDateString('ru-RU')})`);
+    console.log(
+      `📅 Фильтрация новостей: только за последние ${daysBack} дней (с ${cutoffDate.toLocaleDateString('ru-RU')})`
+    );
 
-    const filtered = articles.filter(article => {
+    const filtered = articles.filter((article) => {
       // Фильтр по дате
       if (article.pubDate < cutoffDate) return false;
 
@@ -388,7 +420,9 @@ export class AIBusinessNewsCollector {
     // Показываем самые свежие новости
     if (sorted.length > 0) {
       const newest = sorted[0];
-      console.log(`📰 Самая свежая новость: ${newest.title.substring(0, 60)}... (${newest.pubDate.toLocaleDateString('ru-RU')})`);
+      console.log(
+        `📰 Самая свежая новость: ${newest.title.substring(0, 60)}... (${newest.pubDate.toLocaleDateString('ru-RU')})`
+      );
     }
 
     return sorted;
@@ -401,7 +435,8 @@ export class AIBusinessNewsCollector {
     return [
       {
         title: 'Новые GPT-4 агенты автоматизируют продажи: рост выручки на 300%',
-        description: 'Компании внедряют AI-агентов на базе GPT-4 для автоматизации продаж и поддержки клиентов. Исследование показывает, что бизнесы увеличивают конверсию на 45% и сокращают затраты на обслуживание на 60%. Готовые решения доступны для малого и среднего бизнеса.',
+        description:
+          'Компании внедряют AI-агентов на базе GPT-4 для автоматизации продаж и поддержки клиентов. Исследование показывает, что бизнесы увеличивают конверсию на 45% и сокращают затраты на обслуживание на 60%. Готовые решения доступны для малого и среднего бизнеса.',
         url: 'https://techcrunch.com/tag/artificial-intelligence/',
         source: 'TechCrunch AI',
         category: 'ai-business',
@@ -411,7 +446,8 @@ export class AIBusinessNewsCollector {
       },
       {
         title: 'Топ-5 AI инструментов для контент-маркетинга в 2025 году',
-        description: 'Обзор лучших AI платформ для создания контента: от генерации текстов до видео. Jasper AI, Copy.ai, и новые решения на базе Claude помогают маркетологам создавать контент в 10 раз быстрее при сохранении качества.',
+        description:
+          'Обзор лучших AI платформ для создания контента: от генерации текстов до видео. Jasper AI, Copy.ai, и новые решения на базе Claude помогают маркетологам создавать контент в 10 раз быстрее при сохранении качества.',
         url: 'https://venturebeat.com/ai/',
         source: 'VentureBeat AI',
         category: 'ai-business',
@@ -421,7 +457,8 @@ export class AIBusinessNewsCollector {
       },
       {
         title: 'Обучение ChatGPT для вашего бизнеса: пошаговый гайд',
-        description: 'Как создать кастомного чат-бота на базе ChatGPT за 3 дня без программирования. Детальное руководство по fine-tuning, интеграции с CRM и автоматизации бизнес-процессов. Реальные кейсы и примеры промптов.',
+        description:
+          'Как создать кастомного чат-бота на базе ChatGPT за 3 дня без программирования. Детальное руководство по fine-tuning, интеграции с CRM и автоматизации бизнес-процессов. Реальные кейсы и примеры промптов.',
         url: 'https://towardsdatascience.com/',
         source: 'Towards Data Science',
         category: 'ai-education',
@@ -431,7 +468,8 @@ export class AIBusinessNewsCollector {
       },
       {
         title: 'AI-агенты заменяют целые отделы: кейс российского стартапа',
-        description: 'Российская компания разработала AI-агента, который полностью автоматизировал работу отдела продаж из 12 человек. ROI достигнут за 2 месяца. Решение доступно для внедрения в любом бизнесе.',
+        description:
+          'Российская компания разработала AI-агента, который полностью автоматизировал работу отдела продаж из 12 человек. ROI достигнут за 2 месяца. Решение доступно для внедрения в любом бизнесе.',
         url: 'https://vc.ru/tag/ai',
         source: 'VC.ru',
         category: 'ai-business',
@@ -441,7 +479,8 @@ export class AIBusinessNewsCollector {
       },
       {
         title: 'Рынок готовых AI-решений вырос на 450% за год',
-        description: 'Аналитики прогнозируют, что к концу 2025 года 70% компаний будут использовать готовые AI-решения. Наибольший спрос на чат-боты для клиентской поддержки, AI для контент-маркетинга и автоматизации рутинных задач.',
+        description:
+          'Аналитики прогнозируют, что к концу 2025 года 70% компаний будут использовать готовые AI-решения. Наибольший спрос на чат-боты для клиентской поддержки, AI для контент-маркетинга и автоматизации рутинных задач.',
         url: 'https://aibusiness.com/',
         source: 'AI Business',
         category: 'ai-business',
@@ -451,7 +490,8 @@ export class AIBusinessNewsCollector {
       },
       {
         title: 'Midjourney и DALL-E 3 для бизнеса: практические кейсы',
-        description: 'Как компании используют AI для генерации визуального контента: от соцсетей до презентаций. Подробные инструкции, промпты и примеры интеграции с рабочими процессами. Экономия на дизайнерах до 80%.',
+        description:
+          'Как компании используют AI для генерации визуального контента: от соцсетей до презентаций. Подробные инструкции, промпты и примеры интеграции с рабочими процессами. Экономия на дизайнерах до 80%.',
         url: 'https://www.theverge.com/ai-artificial-intelligence',
         source: 'The Verge AI',
         category: 'ai-business',

@@ -8,13 +8,15 @@ import os from 'os';
 export class ImageGenerator {
   constructor(config) {
     this.config = config;
-    this.anthropic = config.anthropic.apiKey ? new Anthropic({ apiKey: config.anthropic.apiKey }) : null;
+    this.anthropic = config.anthropic.apiKey
+      ? new Anthropic({ apiKey: config.anthropic.apiKey })
+      : null;
 
     // Настройка axios для работы с прокси
     this.axiosConfig = {
       timeout: 120000, // Увеличено для Qwen API
       headers: {
-        'Authorization': `Bearer ${config.qwen.apiKey}`,
+        Authorization: `Bearer ${config.qwen.apiKey}`,
         'Content-Type': 'application/json',
         'X-DashScope-Async': 'enable' // Асинхронный режим
       }
@@ -43,7 +45,6 @@ export class ImageGenerator {
 
       // Генерируем через Pollinations (бесплатно и стабильно)
       return await this.generateWithFallback(prompt);
-      
     } catch (error) {
       console.error('⚠️ Ошибка при генерации изображения:', error.message);
       return null;
@@ -55,9 +56,10 @@ export class ImageGenerator {
       const message = await this.anthropic.messages.create({
         model: this.config.anthropic.model,
         max_tokens: 400,
-        messages: [{
-          role: 'user',
-          content: `Создай детальный английский промпт для генерации РЕАЛИСТИЧНОГО фото-изображения для новости на тему: "${basicPrompt}"
+        messages: [
+          {
+            role: 'user',
+            content: `Создай детальный английский промпт для генерации РЕАЛИСТИЧНОГО фото-изображения для новости на тему: "${basicPrompt}"
 
 ВАЖНО - Требования к промпту для НОВОСТНОГО изображения:
 - Только на английском языке
@@ -79,7 +81,8 @@ export class ImageGenerator {
 - Текста и надписей на изображении
 
 Ответь ТОЛЬКО промптом на английском, без пояснений.`
-        }]
+          }
+        ]
       });
 
       return message.content[0].text.trim();
@@ -99,7 +102,7 @@ export class ImageGenerator {
 
       // Qwen использует DashScope API от Alibaba Cloud
       // Документация: https://help.aliyun.com/zh/dashscope/
-      
+
       const requestData = {
         model: 'wanx-v1', // Модель для генерации изображений от Qwen
         input: {
@@ -120,7 +123,7 @@ export class ImageGenerator {
         requestData,
         {
           headers: {
-            'Authorization': `Bearer ${this.config.qwen.apiKey}`,
+            Authorization: `Bearer ${this.config.qwen.apiKey}`,
             'Content-Type': 'application/json',
             'X-DashScope-Async': 'enable'
           },
@@ -134,10 +137,14 @@ export class ImageGenerator {
       if (response.data.output && response.data.output.task_id) {
         const taskId = response.data.output.task_id;
         console.log(`⏳ Задача создана: ${taskId}. Ожидаю генерации...`);
-        
+
         // Ожидаем завершения генерации
         return await this.waitForQwenTask(taskId);
-      } else if (response.data.output && response.data.output.results && response.data.output.results[0]) {
+      } else if (
+        response.data.output &&
+        response.data.output.results &&
+        response.data.output.results[0]
+      ) {
         // Синхронный ответ
         return response.data.output.results[0].url;
       } else {
@@ -154,19 +161,16 @@ export class ImageGenerator {
 
   async waitForQwenTask(taskId, maxAttempts = 30) {
     console.log(`⏳ Проверяю статус задачи ${taskId}...`);
-    
+
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        const response = await axios.get(
-          `https://dashscope.aliyuncs.com/api/v1/tasks/${taskId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${this.config.qwen.apiKey}`
-            },
-            timeout: 30000
-          }
-        );
+        const response = await axios.get(`https://dashscope.aliyuncs.com/api/v1/tasks/${taskId}`, {
+          headers: {
+            Authorization: `Bearer ${this.config.qwen.apiKey}`
+          },
+          timeout: 30000
+        });
 
         const status = response.data.output.task_status;
         console.log(`📊 Статус (попытка ${attempt}/${maxAttempts}): ${status}`);
@@ -176,21 +180,27 @@ export class ImageGenerator {
           console.log('✅ Изображение готово!');
           return imageUrl;
         } else if (status === 'FAILED') {
-          throw new Error(`Генерация изображения не удалась: ${response.data.output.message || 'Unknown error'}`);
+          throw new Error(
+            `Генерация изображения не удалась: ${response.data.output.message || 'Unknown error'}`
+          );
         }
 
         // Ждем перед следующей проверкой
         // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
-        await new Promise((resolve) => { setTimeout(resolve, 4000); }); // 4 секунды между проверками
+        await new Promise((resolve) => {
+          setTimeout(resolve, 4000);
+        }); // 4 секунды между проверками
       } catch (error) {
         console.error(`⚠️ Ошибка проверки статуса (попытка ${attempt}):`, error.message);
-        
+
         if (attempt >= maxAttempts) {
           throw new Error('Превышено время ожидания генерации изображения');
         }
-        
+
         // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
-        await new Promise((resolve) => { setTimeout(resolve, 5000); });
+        await new Promise((resolve) => {
+          setTimeout(resolve, 5000);
+        });
       }
     }
 
@@ -200,17 +210,17 @@ export class ImageGenerator {
   async generateWithFallback(prompt) {
     try {
       console.log('🔄 Использую Pollinations.ai как fallback...');
-      
+
       const enhancedPrompt = this.enhancePromptRealistic(prompt);
       const encodedPrompt = encodeURIComponent(enhancedPrompt);
-      
+
       // Pollinations.ai с настройками для реалистичных изображений
       const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1792&height=1024&model=flux&nologo=true&enhance=true&seed=${Date.now()}`;
-      
+
       console.log('✅ Fallback изображение создано');
-      
+
       const imagePath = await this.downloadImage(imageUrl);
-      
+
       return {
         url: imageUrl,
         path: imagePath
@@ -225,21 +235,21 @@ export class ImageGenerator {
     try {
       // Пробуем несколько путей для сохранения (для разных платформ)
       const possibleDirs = [
-        path.join(process.cwd(), 'images'),  // Основной путь
-        '/tmp/images',                        // Для Render/Railway (ephemeral FS)
-        path.join(os.tmpdir(), 'images')     // Системная временная папка
+        path.join(process.cwd(), 'images'), // Основной путь
+        '/tmp/images', // Для Render/Railway (ephemeral FS)
+        path.join(os.tmpdir(), 'images') // Системная временная папка
       ];
 
       let imagesDir = null;
-      
+
       // Находим первую рабочую папку
       for (const dir of possibleDirs) {
         console.log(`📂 Проверяю папку: ${dir}`);
-        
+
         try {
           // eslint-disable-next-line no-await-in-loop
           await fs.mkdir(dir, { recursive: true });
-          
+
           // Проверяем, что папка действительно создана и доступна для записи
           // eslint-disable-next-line no-await-in-loop
           const stats = await fs.stat(dir);
@@ -253,7 +263,7 @@ export class ImageGenerator {
               await fs.unlink(testFile);
               console.log(`✅ Папка images готова: ${dir}`);
               imagesDir = dir;
-              break;  // Нашли рабочую папку!
+              break; // Нашли рабочую папку!
             } catch (testError) {
               console.log(`⚠️ Папка ${dir} не доступна для записи: ${testError.code}`);
             }
@@ -271,7 +281,7 @@ export class ImageGenerator {
       }
 
       const maxRetries = 3;
-      
+
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           // Пересоздаем папку перед каждой попыткой (на случай эфемерной FS)
@@ -305,23 +315,23 @@ export class ImageGenerator {
               // Еще раз проверяем папку прямо перед записью
               // eslint-disable-next-line no-await-in-loop
               await fs.mkdir(imagesDir, { recursive: true });
-              
+
               // eslint-disable-next-line no-await-in-loop
               await fs.writeFile(imagePath, response.data);
               console.log(`✅ Изображение сохранено: ${imagePath}`);
-              
+
               // Проверяем, что файл действительно создан
               // eslint-disable-next-line no-await-in-loop
               const fileStats = await fs.stat(imagePath);
               console.log(`✅ Размер файла: ${fileStats.size} байт`);
-              
+
               return imagePath;
             } catch (writeError) {
               // Ошибка записи файла
               console.error(`⚠️ Ошибка записи файла:`, writeError.message);
               console.error(`⚠️ Код ошибки:`, writeError.code);
               console.error(`⚠️ Путь:`, imagePath);
-              
+
               if (writeError.code === 'EACCES' || writeError.code === 'EROFS') {
                 console.error(`⚠️ Нет прав на запись файла (read-only FS) - публикую без картинки`);
                 return null;
@@ -330,7 +340,9 @@ export class ImageGenerator {
                 console.error(`⚠️ Папка ${imagesDir} недоступна или FS только для чтения`);
                 // Не выходим сразу, пробуем еще раз
                 if (attempt >= maxRetries) {
-                  console.error(`⚠️ Файловая система не поддерживает запись - работаем без изображений`);
+                  console.error(
+                    `⚠️ Файловая система не поддерживает запись - работаем без изображений`
+                  );
                   return null;
                 }
               } else {
@@ -343,11 +355,13 @@ export class ImageGenerator {
         } catch (error) {
           console.error(`❌ Попытка ${attempt} не удалась:`, error.message);
           console.error(`❌ Код ошибки:`, error.code || 'N/A');
-          
+
           if (attempt < maxRetries) {
             console.log(`⏳ Жду 2 секунды перед следующей попыткой...`);
             // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
-            await new Promise((resolve) => { setTimeout(resolve, 2000); });
+            await new Promise((resolve) => {
+              setTimeout(resolve, 2000);
+            });
           }
         }
       }

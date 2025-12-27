@@ -4,7 +4,12 @@ import { AIBusinessBot } from './src/index.js';
 import { BotScheduler } from './src/scheduler.js';
 import { ContentPlanner } from './src/services/contentPlanner.js';
 import { apiLimiter, strictLimiter, healthCheckLimiter } from './src/middleware/rateLimit.js';
-import { validate, runBotSchema, publishSchema, collectSchema } from './src/middleware/validation.js';
+import {
+  validate,
+  runBotSchema,
+  publishSchema,
+  collectSchema
+} from './src/middleware/validation.js';
 import { logger } from './src/utils/logger.js';
 import { metricsMiddleware, register } from './src/utils/metrics.js';
 
@@ -19,7 +24,10 @@ app.use(metricsMiddleware);
 // CORS для удобства работы с фронтендом
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  );
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   next();
 });
@@ -48,7 +56,7 @@ async function initializeServices() {
 }
 
 // Инициализируем сервисы
-initializeServices().catch(err => {
+initializeServices().catch((err) => {
   logger.error('❌ Критическая ошибка инициализации:', err);
 });
 
@@ -130,22 +138,22 @@ app.post('/api/bot/run', strictLimiter, validate(runBotSchema), async (req, res)
     }
 
     logger.info('🚀 API запрос: Запуск бота');
-    
+
     // Отправляем немедленный ответ
-    res.json({ 
+    res.json({
       status: 'started',
       message: 'Бот запущен, выполняется сбор новостей и публикация...'
     });
 
     // Запускаем бота в фоне
-    bot.run()
+    bot
+      .run()
       .then((result) => {
         logger.info('✅ Бот успешно завершил работу', { result });
       })
       .catch((error) => {
         logger.error('❌ Ошибка выполнения бота:', error);
       });
-
   } catch (error) {
     logger.error('❌ Ошибка API:', error);
     res.status(500).json({ error: error.message });
@@ -160,22 +168,22 @@ app.post('/api/bot/publish', strictLimiter, validate(publishSchema), async (req,
     }
 
     logger.info('📤 API запрос: Публикация следующего поста');
-    
+
     // Отправляем немедленный ответ
-    res.json({ 
+    res.json({
       status: 'publishing',
       message: 'Публикация поста началась...'
     });
 
     // Публикуем в фоне
-    scheduler.runScheduledPost()
+    scheduler
+      .runScheduledPost()
       .then(() => {
         logger.info('✅ Пост успешно опубликован');
       })
       .catch((error) => {
         logger.error('❌ Ошибка публикации:', error);
       });
-
   } catch (error) {
     logger.error('❌ Ошибка API:', error);
     res.status(500).json({ error: error.message });
@@ -210,16 +218,16 @@ app.get('/api/content/queue', async (req, res) => {
 
     const plan = await contentPlanner.loadPlan();
     const queue = plan.queue
-      .filter(p => p.status === 'pending')
+      .filter((p) => p.status === 'pending')
       .slice(0, 10) // Первые 10 постов
-      .map(post => ({
+      .map((post) => ({
         id: post.id,
         articlesCount: post.articles.length,
         createdAt: post.createdAt
       }));
 
     res.json({
-      total: plan.queue.filter(p => p.status === 'pending').length,
+      total: plan.queue.filter((p) => p.status === 'pending').length,
       queue: queue
     });
   } catch (error) {
@@ -236,22 +244,22 @@ app.post('/api/content/collect', strictLimiter, validate(collectSchema), async (
     }
 
     logger.info('🔄 API запрос: Сбор новостей');
-    
+
     // Отправляем немедленный ответ
-    res.json({ 
+    res.json({
       status: 'collecting',
       message: 'Сбор новостей начался...'
     });
 
     // Собираем в фоне
-    scheduler.collectAndPlan()
+    scheduler
+      .collectAndPlan()
       .then(() => {
         logger.info('✅ Новости собраны и добавлены в контент-план');
       })
       .catch((error) => {
         logger.error('❌ Ошибка сбора новостей:', error);
       });
-
   } catch (error) {
     logger.error('❌ Ошибка API:', error);
     res.status(500).json({ error: error.message });
@@ -268,7 +276,7 @@ let schedulerRunning = false;
 app.post('/api/scheduler/start', (req, res) => {
   try {
     if (schedulerRunning) {
-      return res.json({ 
+      return res.json({
         status: 'already_running',
         message: 'Планировщик уже запущен'
       });
@@ -282,7 +290,7 @@ app.post('/api/scheduler/start', (req, res) => {
     scheduler.start();
     schedulerRunning = true;
 
-    res.json({ 
+    res.json({
       status: 'started',
       message: 'Планировщик запущен',
       schedules: scheduler.schedules
@@ -312,10 +320,10 @@ app.get('/api/scheduler/status', (req, res) => {
 app.post('/webhook/telegram', async (req, res) => {
   try {
     logger.info('📨 Получен webhook от Telegram', { body: req.body });
-    
+
     // Здесь можно обрабатывать команды от Telegram
     // Например, /publish, /stats и т.д.
-    
+
     res.sendStatus(200);
   } catch (error) {
     logger.error('❌ Ошибка обработки webhook:', error);
@@ -361,7 +369,9 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
   if (process.env.AUTO_START_SCHEDULER === 'true' && scheduler) {
     logger.info('⏰ Автозапуск планировщика...\n');
     try {
-      await new Promise((resolve) => { setTimeout(resolve, 2000); }); // Даем время на инициализацию
+      await new Promise((resolve) => {
+        setTimeout(resolve, 2000);
+      }); // Даем время на инициализацию
       scheduler.start();
       schedulerRunning = true;
       logger.info('✅ Планировщик успешно запущен\n');
@@ -400,7 +410,7 @@ process.on('SIGTERM', () => {
     logger.info('✅ Сервер остановлен');
     process.exit(0);
   });
-  
+
   // Принудительная остановка через 30 секунд
   setTimeout(() => {
     logger.error('❌ Принудительная остановка (timeout)');
@@ -422,7 +432,7 @@ process.on('SIGINT', () => {
     logger.info('✅ Сервер остановлен');
     process.exit(0);
   });
-  
+
   // Принудительная остановка через 30 секунд
   setTimeout(() => {
     logger.error('❌ Принудительная остановка (timeout)');
@@ -446,10 +456,3 @@ server.on('error', (error) => {
 });
 
 export default app;
-
-
-
-
-
-
-

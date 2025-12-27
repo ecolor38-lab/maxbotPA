@@ -4,24 +4,26 @@ dotenv.config();
 // Валидация обязательных переменных окружения
 function validateConfig() {
   const errors = [];
-  
+
   // Проверка Telegram конфигурации
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     errors.push('TELEGRAM_BOT_TOKEN не установлен');
   }
-  
+
   // Проверка хотя бы одного AI API ключа
   if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
     errors.push('Необходим хотя бы один AI API ключ (ANTHROPIC_API_KEY или OPENAI_API_KEY)');
   }
-  
+
   if (errors.length > 0) {
     console.error('\n❌ ОШИБКА КОНФИГУРАЦИИ:\n');
-    errors.forEach(error => console.error(`   - ${error}`));
-    console.error('\n💡 Создайте файл .env на основе .env.example и заполните необходимые данные\n');
+    errors.forEach((error) => console.error(`   - ${error}`));
+    console.error(
+      '\n💡 Создайте файл .env на основе .env.example и заполните необходимые данные\n'
+    );
     process.exit(1);
   }
-  
+
   console.log('✅ Конфигурация валидна');
 }
 
@@ -53,7 +55,7 @@ export const config = {
   search: {
     daysBack: parseInt(process.env.SEARCH_DAYS_BACK) || 7,
     maxNewsItems: parseInt(process.env.MAX_NEWS_ITEMS) || 100,
-    minPostsInPlan: parseInt(process.env.MIN_POSTS_IN_PLAN) || 21  // 21 пост на неделю
+    minPostsInPlan: parseInt(process.env.MIN_POSTS_IN_PLAN) || 21 // 21 пост на неделю
   },
   language: process.env.LANGUAGE || 'ru',
   topics: [

@@ -89,7 +89,7 @@ class BotScheduler {
 
     // Проверяем очередь после сбора
     const plan = await this.contentPlanner.loadPlan();
-    const availablePosts = plan.queue.filter(p => p.status === 'pending');
+    const availablePosts = plan.queue.filter((p) => p.status === 'pending');
 
     if (availablePosts.length === 0) {
       console.log('⚠️ Нет новостей для публикации');
@@ -116,7 +116,7 @@ class BotScheduler {
           // Небольшая задержка между постами (5 секунд)
           if (i < postsToPublish - 1) {
             console.log('⏳ Пауза 5 секунд перед следующим постом...\n');
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            await new Promise((resolve) => setTimeout(resolve, 5000));
           }
         } catch (error) {
           console.error(`❌ Не удалось опубликовать пост #${post.id}:`, error.message);

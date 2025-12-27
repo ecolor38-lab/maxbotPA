@@ -13,7 +13,7 @@ export const validate = (schema) => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      const errors = error.details.map((detail) => ({
         field: detail.path.join('.'),
         message: detail.message
       }));
@@ -44,7 +44,7 @@ export const validateQuery = (schema) => {
     });
 
     if (error) {
-      const errors = error.details.map(detail => ({
+      const errors = error.details.map((detail) => ({
         field: detail.path.join('.'),
         message: detail.message
       }));
@@ -92,14 +92,16 @@ export const collectSchema = Joi.object({
  */
 export const schedulerConfigSchema = Joi.object({
   enabled: Joi.boolean().optional(),
-  schedules: Joi.array().items(
-    Joi.object({
-      time: Joi.string().pattern(/^(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)$/).required(),
-      name: Joi.string().max(100).optional()
-    })
-  ).optional()
+  schedules: Joi.array()
+    .items(
+      Joi.object({
+        time: Joi.string()
+          .pattern(
+            /^(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)$/
+          )
+          .required(),
+        name: Joi.string().max(100).optional()
+      })
+    )
+    .optional()
 });
-
-
-
-

@@ -4,7 +4,7 @@ import client from 'prom-client';
 export const register = new client.Registry();
 
 // Добавляем дефолтные метрики (CPU, память и т.д.)
-client.collectDefaultMetrics({ 
+client.collectDefaultMetrics({
   register,
   prefix: 'ai_bot_'
 });
@@ -110,23 +110,19 @@ register.registerMetric(uptime);
 export const metricsMiddleware = (req, res, next) => {
   const start = Date.now();
   const route = req.route?.path || req.path;
-  
+
   // Увеличиваем счетчик активных запросов
   httpRequestsInProgress.labels(req.method, route).inc();
 
   // Перехватываем завершение запроса
   res.on('finish', () => {
     const duration = Date.now() - start;
-    
+
     // Записываем метрики
-    httpRequestDuration
-      .labels(req.method, route, res.statusCode)
-      .observe(duration);
-    
-    httpRequestsTotal
-      .labels(req.method, route, res.statusCode)
-      .inc();
-    
+    httpRequestDuration.labels(req.method, route, res.statusCode).observe(duration);
+
+    httpRequestsTotal.labels(req.method, route, res.statusCode).inc();
+
     // Уменьшаем счетчик активных запросов
     httpRequestsInProgress.labels(req.method, route).dec();
   });
@@ -156,13 +152,9 @@ export const metrics = {
    * Записать метрику внешнего API запроса
    */
   recordAPIRequest(service, endpoint, duration, success = true) {
-    externalAPIRequests
-      .labels(service, endpoint, success ? 'success' : 'failed')
-      .inc();
-    
-    externalAPIDuration
-      .labels(service, endpoint)
-      .observe(duration);
+    externalAPIRequests.labels(service, endpoint, success ? 'success' : 'failed').inc();
+
+    externalAPIDuration.labels(service, endpoint).observe(duration);
   },
 
   /**
@@ -182,7 +174,3 @@ export const metrics = {
 };
 
 export default register;
-
-
-
-

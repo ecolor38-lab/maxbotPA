@@ -47,7 +47,7 @@ export class AIBusinessBot {
       console.log(`\n📚 Обработка ${articles.length} статей...\n`);
 
       const postText = await this.aiSummarizer.generateSummary(articles);
-      
+
       // Проверяем что постText не пустой
       if (!postText || postText.trim() === '') {
         console.error('❌ Не удалось сгенерировать текст поста');
@@ -89,13 +89,13 @@ export class AIBusinessBot {
     console.log(`📚 Генерирую пост из ${articles.length} статей...\n`);
 
     const postText = await this.aiSummarizer.generateSummary(articles);
-    
+
     // Проверяем что постText не пустой
     if (!postText || postText.trim() === '') {
       console.error('❌ Не удалось сгенерировать текст поста');
       throw new Error('Failed to generate post text');
     }
-    
+
     const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
     console.log('\n📝 Предпросмотр поста:\n');
@@ -118,14 +118,16 @@ export class AIBusinessBot {
 }
 
 // Проверка, запущен ли файл напрямую (работает на Windows и Unix)
-const isMainModule = import.meta.url === `file://${process.argv[1]}` || 
-                      import.meta.url.endsWith(process.argv[1]) ||
-                      process.argv[1]?.endsWith('src/index.js') ||
-                      process.argv[1]?.endsWith('src\\index.js');
+const isMainModule =
+  import.meta.url === `file://${process.argv[1]}` ||
+  import.meta.url.endsWith(process.argv[1]) ||
+  process.argv[1]?.endsWith('src/index.js') ||
+  process.argv[1]?.endsWith('src\\index.js');
 
 if (isMainModule) {
   const bot = new AIBusinessBot();
-  bot.run()
+  bot
+    .run()
     .then(() => {
       console.log('\n👋 Завершение работы бота');
       process.exit(0);
