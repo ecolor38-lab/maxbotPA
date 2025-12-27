@@ -4,10 +4,9 @@ cd /d "%~dp0"
 
 echo === Git Push ===
 git add -A
-git commit -m "refactor: global code cleanup - reduce codebase by 80%%"
+git commit -m "fix: Russian language + sources in posts"
 git push
 
 echo.
 echo Done!
-del "%~f0"
-
+pause

@@ -39,11 +39,35 @@ export class TelegramPublisherNative {
 
   formatPost(text, hashtags, articles) {
     let post = text;
-    if (articles?.[0]?.url) {
-      post += `\n\n📚 [Источник](${articles[0].url})`;
+
+    // Добавляем источники
+    if (articles && articles.length > 0) {
+      const sources = articles
+        .filter((a) => a.url)
+        .slice(0, 3) // Максимум 3 источника
+        .map((a) => `• [${a.source || 'Источник'}](${a.url})`)
+        .join('\n');
+
+      if (sources) {
+        post += `\n\n📚 *Источники:*\n${sources}`;
+      }
     }
-    post += `\n\n${hashtags}`;
-    return post.length > 1020 ? post.substring(0, 1017) + '...' : post;
+
+    // Добавляем хештеги
+    if (hashtags) {
+      post += `\n\n${hashtags}`;
+    }
+
+    // Лимит Telegram - 4096 для сообщений, 1024 для caption
+    const limit = 4000;
+    if (post.length > limit) {
+      // Обрезаем текст, сохраняя источники и хештеги
+      const footer = post.substring(post.lastIndexOf('\n\n📚'));
+      const maxTextLen = limit - footer.length - 10;
+      post = text.substring(0, maxTextLen) + '...' + footer;
+    }
+
+    return post;
   }
 
   async sendMessage(text) {
@@ -59,7 +83,7 @@ export class TelegramPublisherNative {
   async sendPhoto(caption, imagePath) {
     const form = new FormData();
     form.append('chat_id', this.channelId);
-    form.append('caption', caption);
+    form.append('caption', caption.substring(0, 1020)); // Лимит caption
     form.append('parse_mode', 'Markdown');
     form.append('photo', createReadStream(imagePath));
 
