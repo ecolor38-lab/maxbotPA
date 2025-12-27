@@ -3,9 +3,9 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo === Git Sync ===
-git pull --rebase
 git add -A
-git commit -m "fix: port 3000, crash protection, lazy init"
+git commit -m "fix: critical syntax errors"
+git pull --rebase origin main
 git push
 
 echo.
