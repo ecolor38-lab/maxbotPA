@@ -94,7 +94,7 @@ export const schedulerConfigSchema = Joi.object({
   enabled: Joi.boolean().optional(),
   schedules: Joi.array().items(
     Joi.object({
-      time: Joi.string().pattern(/^(\*|[0-9,\-\/]+)\s+(\*|[0-9,\-\/]+)\s+(\*|[0-9,\-\/]+)\s+(\*|[0-9,\-\/]+)\s+(\*|[0-9,\-\/]+)$/).required(),
+      time: Joi.string().pattern(/^(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)\s+(\*|[0-9,\-/]+)$/).required(),
       name: Joi.string().max(100).optional()
     })
   ).optional()
