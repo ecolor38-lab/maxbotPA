@@ -22,8 +22,7 @@ export class AIBusinessNewsCollector {
         name: 'MIT Tech Review',
         url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed'
       },
-      { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml' }
-            ,
+      { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml' },
       // Дополнительные источники
       { name: 'Ars Technica AI', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' },
       { name: 'Wired AI', url: 'https://www.wired.com/feed/tag/ai/latest/rss' },
