@@ -117,6 +117,29 @@ export class ContentPlanner {
 
   async addArticlesToPlan(articles) {
     const plan = await this.loadPlan();
+    const published = await this.loadPublished();
+    
+    // Получаем все URL которые уже были опубликованы
+    const publishedUrls = new Set(published.posts.map(p => p.articles?.map(a => a.url)).flat().filter(Boolean));
+    
+    // Получаем URL из текущего плана
+    const plannedUrls = new Set(plan.queue.flatMap(p => p.articles.map(a => a.url)));
+    
+    // Фильтруем дубликаты
+    const uniqueArticles = articles.filter(article => {
+      const isDuplicate = publishedUrls.has(article.url) || plannedUrls.has(article.url);
+      if (isDuplicate) {
+        console.log(`   🔄 Дубликат пропущен: ${article.title.substring(0, 50)}...`);
+      }
+      return !isDuplicate;
+    });
+    
+    if (uniqueArticles.length < articles.length) {
+      console.log(`\n✅ Отфильтровано ${articles.length - uniqueArticles.length} дубликатов`);
+      console.log(`📝 Новых уникальных новостей: ${uniqueArticles.length}`);
+    }
+    
+    articles = uniqueArticles;
 
     // Группируем статьи по категориям
     const byCategory = {
@@ -195,12 +218,13 @@ export class ContentPlanner {
       post.telegramMessageId = result?.result?.message_id;
     }
 
-    // Добавляем в историю
+    // Добавляем в историю с URL статей для проверки дубликатов
     published.posts.push({
       postId,
       publishedAt: new Date().toISOString(),
       messageId: result?.result?.message_id,
-      articlesCount: post?.articles?.length
+      articlesCount: post?.articles?.length,
+      articles: post?.articles || [] // Сохраняем статьи для проверки дубликатов
     });
     published.lastPublished = new Date().toISOString();
 

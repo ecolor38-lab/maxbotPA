@@ -113,8 +113,7 @@ export class NewsAnalyzer {
 КРИТЕРИИ ОТКЛОНЕНИЯ (isTrustworthy = false):
 - Явные признаки фейка или манипуляций
 - Недостоверный источник
-- Кликбейтный заголовок без содержания
-- Достоверность меньше 4
+- Достоверность меньше 3 (будь менее строгим, принимай больше новостей)
 
 Ответь ТОЛЬКО в формате JSON:
 {
@@ -136,7 +135,7 @@ export class NewsAnalyzer {
           trustScore: data.trustScore || 5,
           interestScore: data.interestScore || 5,
           totalScore: ((data.trustScore || 5) + (data.interestScore || 5)) / 2,
-          isTrustworthy: data.isTrustworthy !== false && (data.trustScore || 5) >= 4,
+          isTrustworthy: data.isTrustworthy !== false && (data.trustScore || 5) >= 3,
           reason: data.reason || 'Анализ выполнен'
         };
       }
