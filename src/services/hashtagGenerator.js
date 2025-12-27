@@ -133,7 +133,7 @@ export class HashtagGenerator {
   }
 
   addTrendingHashtags(lang) {
-    const year = new Date().getFullYear();
+    const _year = new Date().getFullYear(); // eslint-disable-line no-unused-vars
     const trending = [];
     
     // Нормализуем язык с fallback

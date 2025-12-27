@@ -253,7 +253,7 @@ ${postText}
     return found.slice(0, 3).join(', ') || 'AI business automation and chatbots';
   }
 
-  generateDemoSummary(articles) {
+  generateDemoSummary(_articles) {
     return `🚀 AI решения для бизнеса: рост на 300%
 
 Компании внедряют GPT-4 для автоматизации. Результат: +45% конверсия, -60% затраты.

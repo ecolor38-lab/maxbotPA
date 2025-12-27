@@ -1,5 +1,5 @@
 import https from 'https';
-import http from 'http';
+// import http from 'http'; // Not used - using https only
 import fs from 'fs/promises';
 import FormData from 'form-data';
 import path from 'path';

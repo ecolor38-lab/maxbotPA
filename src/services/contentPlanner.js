@@ -172,7 +172,7 @@ export class ContentPlanner {
     return posts;
   }
 
-  createPosts(articles, settings) {
+  createPosts(articles, _settings) {
     const posts = [];
 
     // Новая логика: 1 новость = 1 пост

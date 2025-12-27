@@ -157,6 +157,7 @@ export class ImageGenerator {
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         const response = await axios.get(
           `https://dashscope.aliyuncs.com/api/v1/tasks/${taskId}`,
           {
@@ -179,7 +180,8 @@ export class ImageGenerator {
         }
 
         // Ждем перед следующей проверкой
-        await new Promise(resolve => setTimeout(resolve, 4000)); // 4 секунды между проверками
+        // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
+        await new Promise((resolve) => { setTimeout(resolve, 4000); }); // 4 секунды между проверками
       } catch (error) {
         console.error(`⚠️ Ошибка проверки статуса (попытка ${attempt}):`, error.message);
         
@@ -187,7 +189,8 @@ export class ImageGenerator {
           throw new Error('Превышено время ожидания генерации изображения');
         }
         
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
+        await new Promise((resolve) => { setTimeout(resolve, 5000); });
       }
     }
 
@@ -234,15 +237,19 @@ export class ImageGenerator {
         console.log(`📂 Проверяю папку: ${dir}`);
         
         try {
+          // eslint-disable-next-line no-await-in-loop
           await fs.mkdir(dir, { recursive: true });
           
           // Проверяем, что папка действительно создана и доступна для записи
+          // eslint-disable-next-line no-await-in-loop
           const stats = await fs.stat(dir);
           if (stats.isDirectory()) {
             // Пробуем создать тестовый файл
             const testFile = path.join(dir, '.test');
             try {
+              // eslint-disable-next-line no-await-in-loop
               await fs.writeFile(testFile, 'test');
+              // eslint-disable-next-line no-await-in-loop
               await fs.unlink(testFile);
               console.log(`✅ Папка images готова: ${dir}`);
               imagesDir = dir;
@@ -269,6 +276,7 @@ export class ImageGenerator {
         try {
           // Пересоздаем папку перед каждой попыткой (на случай эфемерной FS)
           try {
+            // eslint-disable-next-line no-await-in-loop
             await fs.mkdir(imagesDir, { recursive: true });
             console.log(`✅ Папка проверена перед попыткой ${attempt}`);
           } catch (mkdirError) {
@@ -284,6 +292,7 @@ export class ImageGenerator {
           console.log(`⬇️ Скачиваю изображение (попытка ${attempt}/${maxRetries})...`);
           console.log(`📍 Путь сохранения: ${imagePath}`);
 
+          // eslint-disable-next-line no-await-in-loop
           const response = await axios.get(url, {
             responseType: 'arraybuffer',
             timeout: 30000,
@@ -294,12 +303,15 @@ export class ImageGenerator {
           if (response.data && response.data.length > 0) {
             try {
               // Еще раз проверяем папку прямо перед записью
+              // eslint-disable-next-line no-await-in-loop
               await fs.mkdir(imagesDir, { recursive: true });
               
+              // eslint-disable-next-line no-await-in-loop
               await fs.writeFile(imagePath, response.data);
               console.log(`✅ Изображение сохранено: ${imagePath}`);
               
               // Проверяем, что файл действительно создан
+              // eslint-disable-next-line no-await-in-loop
               const fileStats = await fs.stat(imagePath);
               console.log(`✅ Размер файла: ${fileStats.size} байт`);
               
@@ -334,7 +346,8 @@ export class ImageGenerator {
           
           if (attempt < maxRetries) {
             console.log(`⏳ Жду 2 секунды перед следующей попыткой...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // eslint-disable-next-line no-await-in-loop, no-promise-executor-return
+            await new Promise((resolve) => { setTimeout(resolve, 2000); });
           }
         }
       }

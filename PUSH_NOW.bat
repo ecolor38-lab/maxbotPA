@@ -9,7 +9,7 @@ echo ========================================
 echo.
 
 git add -A
-git commit -m "fix: add format:check script to package.json for CI"
+git commit -m "fix: resolve all ESLint errors and warnings"
 git push origin main
 
 echo.

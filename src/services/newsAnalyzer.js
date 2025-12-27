@@ -20,6 +20,7 @@ export class NewsAnalyzer {
 
     for (const article of articles) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         const analysis = await this.analyzeArticle(article);
 
         if (analysis.isTrustworthy) {

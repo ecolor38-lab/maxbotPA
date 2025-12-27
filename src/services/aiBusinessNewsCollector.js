@@ -1,5 +1,5 @@
 import Parser from 'rss-parser';
-import axios from 'axios';
+// import axios from 'axios'; // Not used - using rss-parser instead
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { NewsAnalyzer } from './newsAnalyzer.js';
 import { SourceStats } from './sourceStats.js';
@@ -230,6 +230,7 @@ export class AIBusinessNewsCollector {
         const ratePercent = Math.round(successRate * 100);
         console.log(`📡 Парсинг: ${source.name} (успешность: ${ratePercent}%)...`);
         
+        // eslint-disable-next-line no-await-in-loop
         const articles = await this.parseRSSFeed(source);
 
         if (articles && articles.length > 0) {

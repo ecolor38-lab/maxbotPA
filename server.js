@@ -327,7 +327,7 @@ app.post('/webhook/telegram', async (req, res) => {
 // ERROR HANDLING
 // ====================
 
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   logger.error('💥 Необработанная ошибка:', err);
   res.status(500).json({
     error: 'Internal Server Error',
@@ -361,7 +361,7 @@ const server = app.listen(PORT, '0.0.0.0', async () => {
   if (process.env.AUTO_START_SCHEDULER === 'true' && scheduler) {
     logger.info('⏰ Автозапуск планировщика...\n');
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Даем время на инициализацию
+      await new Promise((resolve) => { setTimeout(resolve, 2000); }); // Даем время на инициализацию
       scheduler.start();
       schedulerRunning = true;
       logger.info('✅ Планировщик успешно запущен\n');
