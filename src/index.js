@@ -1,7 +1,6 @@
 import { config } from './config/config.js';
 import { AIBusinessNewsCollector } from './services/aiBusinessNewsCollector.js';
 import { AISummarizer } from './services/aiSummarizer.js';
-import { ImageGenerator } from './services/imageGenerator.js';
 import { HashtagGenerator } from './services/hashtagGenerator.js';
 import { TelegramPublisherNative } from './services/telegramPublisherNative.js';
 
@@ -9,7 +8,6 @@ export class AIBusinessBot {
   constructor() {
     this.newsCollector = new AIBusinessNewsCollector(config);
     this.aiSummarizer = new AISummarizer(config);
-    this.imageGenerator = new ImageGenerator(config);
     this.hashtagGenerator = new HashtagGenerator(config);
     this.telegramPublisher = new TelegramPublisherNative(config);
   }
@@ -58,24 +56,11 @@ export class AIBusinessBot {
 
       const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
-      // ВАЖНО: Всегда генерируем изображение для более привлекательного поста
-      let imageData = null;
-      console.log('🎨 Генерирую изображение для поста...');
-      try {
-        const imagePrompt = await this.aiSummarizer.generateImagePrompt(postText);
-        imageData = await this.imageGenerator.generateImage(imagePrompt);
-        if (imageData && (imageData.path || imageData.url)) {
-          console.log(`✅ Изображение создано: ${imageData.path || imageData.url}`);
-        }
-      } catch (error) {
-        console.log(`⚠️ Не удалось создать изображение: ${error.message}`);
-      }
-
       console.log('\n📝 Предпросмотр поста:\n');
       console.log('─'.repeat(60));
       console.log(postText);
       console.log('\n' + hashtags);
-      console.log('\n📚 Источники:');
+      console.log('\n📚 Источники (превью автоматически):');
       articles.forEach((article, index) => {
         console.log(`${index + 1}. ${article.source}: ${article.url}`);
       });
@@ -116,38 +101,20 @@ export class AIBusinessBot {
     
     const hashtags = this.hashtagGenerator.generateHashtags(postText, articles);
 
-    // Генерируем изображение
-    let imageData = null;
-    console.log('🎨 Генерирую изображение для поста...');
-    try {
-      const imagePrompt = await this.aiSummarizer.generateImagePrompt(postText);
-      imageData = await this.imageGenerator.generateImage(imagePrompt);
-      if (imageData && (imageData.path || imageData.url)) {
-        console.log(`✅ Изображение создано: ${imageData.path || imageData.url}`);
-      } else {
-        console.log(`⚠️ Изображение не создано`);
-      }
-    } catch (error) {
-      console.log(`⚠️ Ошибка генерации изображения: ${error.message}`);
-    }
-
     console.log('\n📝 Предпросмотр поста:\n');
     console.log('─'.repeat(60));
     console.log(postText);
     console.log('\n' + hashtags);
-    if (imageData && (imageData.path || imageData.url)) {
-      console.log(`\n🖼️ Изображение: ${imageData.path || imageData.url}`);
-    }
     console.log('─'.repeat(60) + '\n');
 
-    // Публикуем
-    const result = await this.telegramPublisher.publish(postText, hashtags, imageData, articles);
+    // Публикуем текст - Telegram автоматически покажет превью по ссылке
+    const result = await this.telegramPublisher.publish(postText, hashtags, null, articles);
 
     console.log('✅ Пост опубликован!');
     console.log(`📊 Статистика:`);
     console.log(`   - Статей: ${articles.length}`);
     console.log(`   - Длина: ${postText.length} символов`);
-    console.log(`   - Изображение: ${imageData ? 'Да (' + (imageData.path || imageData.url) + ')' : 'Нет'}`);
+    console.log(`   - Превью: автоматически по ссылке`);
 
     return result;
   }
