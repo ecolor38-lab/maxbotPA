@@ -1,9 +1,13 @@
 import Parser from 'rss-parser';
+const crypto = require('crypto');
+const fs = require('fs').promises;
+const path = require('path');
 
 export class AIBusinessNewsCollector {
   constructor(config) {
     this.config = config;
     this.parser = new Parser({ timeout: 15000 });
+        this.seenArticlesFile = path.join(__dirname, '../../data/seen_articles.json');
   }
 
   getSources() {
@@ -19,11 +23,42 @@ export class AIBusinessNewsCollector {
         url: 'https://www.technologyreview.com/topic/artificial-intelligence/feed'
       },
       { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml' }
+            ,
+      // Дополнительные источники
+      { name: 'Ars Technica AI', url: 'https://feeds.arstechnica.com/arstechnica/technology-lab' },
+      { name: 'Wired AI', url: 'https://www.wired.com/feed/tag/ai/latest/rss' },
+      { name: 'AI News', url: 'https://www.artificialintelligence-news.com/feed/' },
+      { name: 'The AI Journal', url: 'https://aijourn.com/feed/' }
     ];
+  }
+
+    // Загрузка уже опубликованных статей
+  async loadSeenArticles() {
+    try {
+      const data = await fs.readFile(this.seenArticlesFile, 'utf8');
+      return JSON.parse(data);
+    } catch (error) {
+      // Файл не существует - создадим
+      await fs.mkdir(path.dirname(this.seenArticlesFile), { recursive: true });
+      await fs.writeFile(this.seenArticlesFile, JSON.stringify({ hashes: [] }));
+      return { hashes: [] };
+    }
+  }
+
+  // Сохранение хэшей опубликованных статей
+  async saveSeenArticles(seenArticles) {
+    await fs.writeFile(this.seenArticlesFile, JSON.stringify(seenArticles, null, 2));
+  }
+
+  // Генерация хэша заголовка для проверки дубликатов
+  getArticleHash(title) {
+    return crypto.createHash('md5').update(title.toLowerCase().trim()).digest('hex');
   }
 
   async collectNews() {
     console.log('🔍 Сбор новостей...\n');
+        const seenData = await this.loadSeenArticles();
+    const seenHashes = new Set(seenData.hashes || []);
     const allArticles = [];
 
     for (const source of this.getSources()) {
@@ -40,7 +75,7 @@ export class AIBusinessNewsCollector {
             snippet: item.contentSnippet?.substring(0, 300) || '',
             url: item.link || '',
             source: source.name,
-            pubDate: item.pubDate ? new Date(item.pubDate) : new Date()
+            pubDate: item.pubDate ? new Date(item.pubDate) : new Date(
           }));
 
         allArticles.push(...articles);
