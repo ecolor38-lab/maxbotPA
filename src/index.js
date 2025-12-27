@@ -65,19 +65,16 @@ export class AIBusinessBot {
         console.log(`${index + 1}. ${article.source}: ${article.url}`);
       });
       console.log('─'.repeat(60));
-      if (imageData && (imageData.path || imageData.url)) {
-        console.log(`\n🖼️ Изображение: ${imageData.path || imageData.url}`);
-      }
       console.log('');
 
-      const result = await this.telegramPublisher.publish(postText, hashtags, imageData, articles);
+      const result = await this.telegramPublisher.publish(postText, hashtags, null, articles);
 
       console.log('\n✅ Задача выполнена успешно!');
       console.log(`📊 Статистика:`);
       console.log(`   - Найдено статей: ${articles.length}`);
       console.log(`   - Длина поста: ${postText.length} символов`);
       console.log(`   - Хештегов: ${hashtags.split(' ').length}`);
-      console.log(`   - Изображение: ${imageData ? 'Да' : 'Нет'}`);
+      console.log(`   - Превью: автоматически по ссылке`);
 
       return result;
     } catch (error) {
