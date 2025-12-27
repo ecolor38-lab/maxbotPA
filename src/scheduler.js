@@ -120,21 +120,29 @@ class BotScheduler {
 
     console.log(`📤 Публикую ${postsToPublish} постов...\n`);
 
+    let publishedCount = 0;
     for (let i = 0; i < postsToPublish; i++) {
-      const post = await this.contentPlanner.getNextPost();
+      // Берем пост из уже загруженного списка (не из базы повторно!)
+      const post = availablePosts[i];
 
-      if (post) {
-        await this.publishPost(post);
+      if (post && post.status === 'pending') {
+        try {
+          await this.publishPost(post);
+          publishedCount++;
 
-        // Небольшая задержка между постами (5 секунд)
-        if (i < postsToPublish - 1) {
-          console.log('⏳ Пауза 5 секунд перед следующим постом...\n');
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          // Небольшая задержка между постами (5 секунд)
+          if (i < postsToPublish - 1) {
+            console.log('⏳ Пауза 5 секунд перед следующим постом...\n');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+        } catch (error) {
+          console.error(`❌ Не удалось опубликовать пост #${post.id}:`, error.message);
+          // Продолжаем со следующим постом
         }
       }
     }
 
-    console.log(`\n✅ Опубликовано ${postsToPublish} постов`);
+    console.log(`\n✅ Опубликовано ${publishedCount} из ${postsToPublish} постов`);
   }
 
   async publishPost(post) {

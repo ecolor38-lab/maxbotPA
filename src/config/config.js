@@ -53,7 +53,7 @@ export const config = {
   search: {
     daysBack: parseInt(process.env.SEARCH_DAYS_BACK) || 7,
     maxNewsItems: parseInt(process.env.MAX_NEWS_ITEMS) || 100,
-    minPostsInPlan: parseInt(process.env.MIN_POSTS_IN_PLAN) || 12
+    minPostsInPlan: parseInt(process.env.MIN_POSTS_IN_PLAN) || 21  // 21 пост на неделю
   },
   language: process.env.LANGUAGE || 'ru',
   topics: [
