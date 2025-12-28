@@ -3,6 +3,7 @@ import { AIBusinessNewsCollector } from './services/aiBusinessNewsCollector.js';
 import { AISummarizer } from './services/aiSummarizer.js';
 import { HashtagGenerator } from './services/hashtagGenerator.js';
 import { TelegramPublisherNative } from './services/telegramPublisherNative.js';
+import { ContentPlanner } from './services/contentPlanner.js';
 
 export class AIBusinessBot {
   constructor() {
@@ -10,6 +11,7 @@ export class AIBusinessBot {
     this.summarizer = new AISummarizer(config);
     this.hashtagGenerator = new HashtagGenerator(config);
     this.publisher = new TelegramPublisherNative(config);
+    this.planner = new ContentPlanner();
   }
 
   async run() {
@@ -20,12 +22,16 @@ export class AIBusinessBot {
 
       // Сбор новостей
       let articles = await this.newsCollector.collectNews();
+
+      // Фильтрация дубликатов - убираем уже опубликованные
+      articles = await this.planner.filterNewArticles(articles);
+
       if (!articles.length) {
-        console.log('⚠️ Новостей нет, используем демо');
-        articles = this.newsCollector.getDemoArticles();
+        console.log('⚠️ Нет новых статей для публикации (все уже были опубликованы)');
+        return { skipped: true, reason: 'no_new_articles' };
       }
 
-      console.log(`\n📚 Обработка ${articles.length} статей...\n`);
+      console.log(`\n📚 Обработка ${articles.length} новых статей...\n`);
 
       // Генерация поста
       const text = await this.summarizer.generateSummary(articles);
@@ -41,6 +47,9 @@ export class AIBusinessBot {
       // Публикация
       const result = await this.publisher.publish(text, hashtags, null, articles);
 
+      // Сохраняем URL как опубликованные
+      await this.planner.markUrlsAsPublished(articles);
+
       console.log('✅ Готово!');
       return result;
     } catch (error) {
@@ -50,11 +59,23 @@ export class AIBusinessBot {
   }
 
   async generateAndPublish(articles) {
-    const text = await this.summarizer.generateSummary(articles);
+    // Фильтрация дубликатов
+    const newArticles = await this.planner.filterNewArticles(articles);
+    if (!newArticles.length) {
+      console.log('⚠️ Все статьи уже были опубликованы');
+      return { skipped: true };
+    }
+
+    const text = await this.summarizer.generateSummary(newArticles);
     if (!text) throw new Error('Не удалось сгенерировать текст');
 
     const hashtags = this.hashtagGenerator.generateHashtags(text);
-    return await this.publisher.publish(text, hashtags, null, articles);
+    const result = await this.publisher.publish(text, hashtags, null, newArticles);
+
+    // Сохраняем как опубликованные
+    await this.planner.markUrlsAsPublished(newArticles);
+
+    return result;
   }
 }
 

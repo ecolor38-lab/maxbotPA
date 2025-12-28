@@ -7,6 +7,7 @@ export class ContentPlanner {
   constructor() {
     this.dataDir = this.findWritableDir();
     this.planFile = path.join(this.dataDir, 'content-plan.json');
+    this.publishedFile = path.join(this.dataDir, 'published-urls.json');
     console.log(`📂 Данные: ${this.dataDir}`);
   }
 
@@ -103,5 +104,63 @@ export class ContentPlanner {
       await this.savePlan(plan);
       console.log(`🗑️ Удалено ${before - plan.queue.length} старых постов`);
     }
+  }
+
+  // === ДЕДУПЛИКАЦИЯ ===
+
+  async loadPublishedUrls() {
+    try {
+      const data = await fs.readFile(this.publishedFile, 'utf8');
+      const parsed = JSON.parse(data);
+      // Очистка старых URL (старше 30 дней)
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      return parsed.filter((item) => item.date > cutoff);
+    } catch {
+      return [];
+    }
+  }
+
+  async savePublishedUrls(urls) {
+    try {
+      const dir = path.dirname(this.publishedFile);
+      if (!existsSync(dir)) {
+        await fs.mkdir(dir, { recursive: true });
+      }
+      await fs.writeFile(this.publishedFile, JSON.stringify(urls, null, 2));
+    } catch (error) {
+      console.warn('⚠️ Не удалось сохранить опубликованные URL:', error.message);
+    }
+  }
+
+  async filterNewArticles(articles) {
+    const published = await this.loadPublishedUrls();
+    const publishedUrls = new Set(published.map((p) => p.url));
+
+    const newArticles = articles.filter((a) => !publishedUrls.has(a.url));
+    const duplicates = articles.length - newArticles.length;
+
+    if (duplicates > 0) {
+      console.log(`🔄 Пропущено дубликатов: ${duplicates}`);
+    }
+
+    return newArticles;
+  }
+
+  async markUrlsAsPublished(articles) {
+    const published = await this.loadPublishedUrls();
+    const now = Date.now();
+
+    for (const article of articles) {
+      if (article.url && !published.some((p) => p.url === article.url)) {
+        published.push({
+          url: article.url,
+          title: article.title,
+          date: now
+        });
+      }
+    }
+
+    await this.savePublishedUrls(published);
+    console.log(`📌 Сохранено ${articles.length} URL как опубликованные`);
   }
 }

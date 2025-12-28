@@ -50,6 +50,18 @@ export class AIBusinessNewsCollector {
   }
 
   isRelevant(item) {
+    // Фильтрация по дате - только за последние 2 дня
+    if (item.pubDate) {
+      const pubDate = new Date(item.pubDate);
+      const daysBack = this.config?.search?.daysBack || 2;
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+      if (pubDate < cutoffDate) {
+        return false;
+      }
+    }
+
+    // Фильтрация по ключевым словам
     const text = `${item.title} ${item.contentSnippet || ''}`.toLowerCase();
     const keywords = ['ai', 'gpt', 'llm', 'chatbot', 'automation', 'machine learning', 'neural'];
     return keywords.some((kw) => text.includes(kw));

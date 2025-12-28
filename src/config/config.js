@@ -24,7 +24,7 @@ export const config = {
     model: process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307'
   },
   search: {
-    daysBack: parseInt(process.env.SEARCH_DAYS_BACK) || 7
+    daysBack: parseInt(process.env.SEARCH_DAYS_BACK) || 2
   },
   language: process.env.LANGUAGE || 'ru'
 };
