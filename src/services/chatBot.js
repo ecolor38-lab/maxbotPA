@@ -3,9 +3,41 @@ import OpenAI from 'openai';
 import axios from 'axios';
 import { getDb } from '../db/database.js';
 
-const SYSTEM_PROMPT = 'Ты полезный AI-ассистент канала «Нейро.Новости». Отвечай на русском языке кратко и по делу. Не используй markdown-заголовки. Если тебя спросят кто ты — скажи что ты AI-ассистент канала Нейро.Новости.';
+const SYSTEM_PROMPT = `Ты полезный AI-ассистент канала «Нейро.Новости». Отвечай на русском языке кратко и по делу. Не используй markdown-заголовки. Если тебя спросят кто ты — скажи что ты AI-ассистент канала Нейро.Новости.
+
+ПРАВИЛА БЕЗОПАСНОСТИ (строго соблюдай):
+- Никогда не давай инструкции по созданию оружия, взрывчатки, наркотиков или вредоносного ПО
+- Не генерируй контент сексуального характера, особенно с участием несовершеннолетних
+- Не поддерживай экстремизм, терроризм, разжигание ненависти
+- Не помогай с мошенничеством, кражей данных, взломом
+- Не давай медицинских диагнозов — рекомендуй обратиться к врачу
+- Не давай юридических консультаций — рекомендуй обратиться к юристу
+- Если пользователь говорит о суициде — мягко предложи позвонить на линию помощи 8-800-2000-122
+- Откажи вежливо если запрос нарушает правила, объясни почему`;
 
 const MAX_MESSAGE_LENGTH = 4000;
+const IMAGE_DAILY_LIMIT = 2;
+const IMAGE_KEYWORDS = ['нарисуй', 'нарисуйте', 'сгенерируй картинку', 'сгенерируй изображение', 'создай картинку', 'создай изображение', 'покажи картинку', 'сделай картинку', 'draw', 'imagine', 'generate image', 'нарисуй мне', 'сгенерируй фото'];
+
+// --- Security: blocked content patterns ---
+const BLOCKED_PATTERNS = [
+  // Violence & weapons
+  /убий|убить|убей|взорв|бомб|оружи|автомат|пистолет|нож.*рез|кров.*прол|расчленени|пытк|torture|kill|murder|weapon|bomb|gun|stab|blood/i,
+  // NSFW / sexual
+  /порно|секс.*поз|голая|голый|обнажён|эротик|xxx|nsfw|nude|naked|hentai|porn|sex.*position/i,
+  // Drugs
+  /наркотик|метамфетамин|кокаин|героин|meth|cocaine|heroin|drug.*synth/i,
+  // Hate speech & extremism
+  /нацис|свастик|фашис|расов.*превосх|nazi|swastik|fascis|racial.*suprem|террорис|terrorist/i,
+  // Child exploitation
+  /ребён.*голы|дет.*обнаж|child.*nude|child.*naked|minor.*sex|педофил|pedophil/i,
+  // Self-harm
+  /суицид|самоубий|suicide|self.*harm|вскрыть.*вен/i,
+  // Deepfakes / impersonation of real people for harm
+  /deepfake|дипфейк/i
+];
+
+const MAX_IMAGE_PROMPT_LENGTH = 1000;
 
 export class ChatBot {
   constructor(config) {
@@ -15,9 +47,13 @@ export class ChatBot {
     this.chatLink = config.max?.chatLink || 'https://max.ru';
     this.channelChatId = config.max?.chatId;
 
-    this.FREE_DAILY_LIMIT = config.chat?.freeDailyLimit || 10;
+    this.FREE_DAILY_LIMIT = config.chat?.freeDailyLimit || 5;
     this.PREMIUM_DAILY_LIMIT = config.chat?.premiumDailyLimit || 100;
     this.CONTEXT_MESSAGES = config.chat?.contextMessages || 10;
+
+    // Rate limiting: 1 message per 2 seconds per user
+    this.lastMessageTime = new Map();
+    this.RATE_LIMIT_MS = 2000;
 
     this.anthropic = config.anthropic?.apiKey
       ? new Anthropic({ apiKey: config.anthropic.apiKey })
@@ -55,6 +91,21 @@ export class ChatBot {
         return;
       }
 
+      // Rate limiting
+      const now = Date.now();
+      const lastTime = this.lastMessageTime.get(userId);
+      if (lastTime && (now - lastTime) < this.RATE_LIMIT_MS) {
+        return; // silently ignore spam
+      }
+      this.lastMessageTime.set(userId, now);
+      // Cleanup old entries every 1000 messages
+      if (this.lastMessageTime.size > 1000) {
+        const cutoff = now - 60000;
+        for (const [uid, time] of this.lastMessageTime) {
+          if (time < cutoff) this.lastMessageTime.delete(uid);
+        }
+      }
+
       const username = msg.sender?.username || null;
       const firstName = msg.sender?.first_name || msg.sender?.name || null;
 
@@ -77,6 +128,13 @@ export class ChatBot {
         return;
       }
 
+      // Security: block dangerous content
+      if (this.isBlockedContent(text)) {
+        console.warn(`🚫 Blocked content from user ${userId}: "${text.substring(0, 50)}..."`);
+        await this.sendMessage(userId, '🚫 Запрос содержит запрещённый контент. Пожалуйста, соблюдайте правила использования.');
+        return;
+      }
+
       // Handle commands
       if (text.startsWith('/')) {
         await this.handleCommand(userId, text, user);
@@ -92,7 +150,26 @@ export class ChatBot {
 
       // Re-read counter from DB for accurate limit check
       const db = getDb();
-      const freshUser = db.prepare('SELECT messages_today, is_premium FROM bot_users WHERE user_id = ?').get(userId);
+      const freshUser = db.prepare('SELECT messages_today, images_today, is_premium FROM bot_users WHERE user_id = ?').get(userId);
+
+      // Check if this is an image generation request
+      if (this.isImageRequest(text)) {
+        if (!freshUser.is_premium) {
+          await this.sendMessage(
+            userId,
+            `🎨 Генерация картинок доступна только в *Premium*.\n\n💎 Premium — ${this.PREMIUM_DAILY_LIMIT} сообщений + ${IMAGE_DAILY_LIMIT} картинки/день:`,
+            this.buildPremiumKeyboard()
+          );
+          return;
+        }
+        if (freshUser.images_today >= IMAGE_DAILY_LIMIT) {
+          await this.sendMessage(userId, `🎨 Лимит картинок на сегодня исчерпан (${IMAGE_DAILY_LIMIT}/${IMAGE_DAILY_LIMIT}). Попробуйте завтра!`);
+          return;
+        }
+        await this.handleImageGeneration(userId, text);
+        return;
+      }
+
       const limit = freshUser.is_premium ? this.PREMIUM_DAILY_LIMIT : this.FREE_DAILY_LIMIT;
       if (freshUser.messages_today >= limit) {
         if (freshUser.is_premium) {
@@ -227,11 +304,11 @@ export class ChatBot {
 
       case '/premium': {
         if (user.is_premium) {
-          await this.sendMessage(userId, `💎 У вас Premium!\nДействует до: ${user.premium_until || '∞'}\nЛимит: ${this.PREMIUM_DAILY_LIMIT} сообщений/день\nИспользовано сегодня: ${user.messages_today}`);
+          await this.sendMessage(userId, `💎 У вас Premium!\nДействует до: ${user.premium_until || '∞'}\nЛимит: ${this.PREMIUM_DAILY_LIMIT} сообщений/день\n🎨 Картинки: ${IMAGE_DAILY_LIMIT}/день\nИспользовано сегодня: ${user.messages_today} сообщений, ${user.images_today || 0} картинок`);
         } else {
           await this.sendMessage(
             userId,
-            `💎 *Premium-доступ* — 390₽/мес\n\n✅ ${this.PREMIUM_DAILY_LIMIT} сообщений/день (вместо ${this.FREE_DAILY_LIMIT})\n✅ Приоритетные ответы\n\nИспользовано сегодня: ${user.messages_today}/${this.FREE_DAILY_LIMIT}`,
+            `💎 *Premium-доступ* — 390₽/мес\n\n✅ ${this.PREMIUM_DAILY_LIMIT} сообщений/день (вместо ${this.FREE_DAILY_LIMIT})\n✅ 🎨 Генерация картинок (${IMAGE_DAILY_LIMIT}/день)\n✅ Приоритетные ответы\n\nИспользовано сегодня: ${user.messages_today}/${this.FREE_DAILY_LIMIT}`,
             this.buildPremiumKeyboard()
           );
         }
@@ -246,7 +323,7 @@ export class ChatBot {
       }
 
       case '/help':
-        await this.sendMessage(userId, `📋 *Команды:*\n\n/start — начало работы\n/models — выбор модели AI\n/premium — информация о Premium\n/reset — очистить контекст диалога\n/help — эта справка\n\nИли просто напишите сообщение!`);
+        await this.sendMessage(userId, `📋 *Команды:*\n\n/start — начало работы\n/models — выбор модели AI\n/premium — информация о Premium\n/reset — очистить контекст диалога\n/help — эта справка\n\n🎨 Для генерации картинок напишите «нарисуй ...» (Premium)\n\nИли просто напишите сообщение!`);
         break;
 
       default:
@@ -296,6 +373,126 @@ export class ChatBot {
       temperature: 0.7
     });
     return response.choices[0].message.content;
+  }
+
+  // --- Security ---
+  isBlockedContent(text) {
+    return BLOCKED_PATTERNS.some((pattern) => pattern.test(text));
+  }
+
+  // --- Image generation ---
+  isImageRequest(text) {
+    const lower = text.toLowerCase();
+    return IMAGE_KEYWORDS.some((kw) => lower.includes(kw));
+  }
+
+  async handleImageGeneration(userId, text) {
+    if (!this.openai) {
+      await this.sendMessage(userId, '⚠️ Генерация картинок временно недоступна.');
+      return;
+    }
+
+    if (text.length > MAX_IMAGE_PROMPT_LENGTH) {
+      await this.sendMessage(userId, `⚠️ Промт слишком длинный (${text.length} символов). Максимум: ${MAX_IMAGE_PROMPT_LENGTH}.`);
+      return;
+    }
+
+    await this.sendMessage(userId, '🎨 Генерирую картинку, подождите...');
+
+    try {
+      const response = await this.openai.images.generate({
+        model: 'dall-e-3',
+        prompt: text,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard'
+      });
+
+      const imageUrl = response.data[0]?.url;
+      if (!imageUrl) {
+        await this.sendMessage(userId, '⚠️ Не удалось сгенерировать картинку. Попробуйте другой промт.');
+        return;
+      }
+
+      // Download image
+      const imageRes = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 30000 });
+
+      // Upload to MAX
+      const token = await this.uploadImageToMax(imageRes.data, userId);
+      if (!token) {
+        await this.sendMessage(userId, '⚠️ Не удалось загрузить картинку. Попробуйте ещё раз.');
+        return;
+      }
+
+      // Send image to user
+      const revisedPrompt = response.data[0]?.revised_prompt;
+      const caption = revisedPrompt ? `🎨 ${revisedPrompt.substring(0, 200)}` : '🎨 Готово!';
+
+      await this.sendMessageWithImage(userId, caption, token);
+
+      // Update counter
+      const db = getDb();
+      db.prepare('UPDATE bot_users SET images_today = images_today + 1 WHERE user_id = ?').run(userId);
+
+      console.log(`🎨 Image generated for user ${userId} (${(imageRes.data.length / 1024).toFixed(0)}KB)`);
+    } catch (error) {
+      console.error('❌ Image generation error:', error.message);
+      const msg = error.code === 'content_policy_violation'
+        ? '⚠️ Промт нарушает правила генерации. Попробуйте другой запрос.'
+        : '⚠️ Ошибка при генерации картинки. Попробуйте ещё раз.';
+      await this.sendMessage(userId, msg);
+    }
+  }
+
+  async uploadImageToMax(imageBuffer, userId) {
+    try {
+      // Step 1: get upload URL (use user_id for DM upload)
+      const uploadRes = await axios.post(`${this.apiUrl}/uploads`, null, {
+        params: { user_id: userId, type: 'image' },
+        headers: { Authorization: this.botToken },
+        timeout: 15000
+      });
+
+      const uploadUrl = uploadRes.data?.url;
+      if (!uploadUrl) return null;
+
+      // Step 2: upload image
+      const FormData = (await import('form-data')).default;
+      const formData = new FormData();
+      formData.append('data', Buffer.from(imageBuffer), { filename: 'image.png', contentType: 'image/png' });
+
+      const result = await axios.post(uploadUrl, formData, {
+        headers: formData.getHeaders(),
+        timeout: 30000
+      });
+
+      const photos = result.data?.photos;
+      if (!photos) return null;
+      const firstKey = Object.keys(photos)[0];
+      return photos[firstKey]?.token || null;
+    } catch (error) {
+      console.error('❌ Upload image error:', error.response?.status, error.response?.data || error.message);
+      return null;
+    }
+  }
+
+  async sendMessageWithImage(userId, text, imageToken) {
+    try {
+      await axios.post(`${this.apiUrl}/messages`, {
+        text,
+        format: 'markdown',
+        attachments: [{ type: 'image', payload: { token: imageToken } }]
+      }, {
+        params: { user_id: userId },
+        headers: {
+          Authorization: this.botToken,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      });
+    } catch (error) {
+      console.error('❌ Send image message error:', error.response?.status, error.response?.data || error.message);
+    }
   }
 
   // --- Subscription check ---
@@ -447,9 +644,10 @@ export class ChatBot {
     const today = new Date().toISOString().split('T')[0];
     if (user.last_message_date !== today) {
       const db = getDb();
-      db.prepare('UPDATE bot_users SET messages_today = 0, last_message_date = ? WHERE user_id = ?')
+      db.prepare('UPDATE bot_users SET messages_today = 0, images_today = 0, last_message_date = ? WHERE user_id = ?')
         .run(today, user.user_id);
       user.messages_today = 0;
+      user.images_today = 0;
       user.last_message_date = today;
     }
   }

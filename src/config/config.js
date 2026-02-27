@@ -34,7 +34,7 @@ export const config = {
     returnUrl: process.env.YOOKASSA_RETURN_URL || 'http://141.98.235.39:3000/payment-success'
   },
   chat: {
-    freeDailyLimit: parseInt(process.env.CHAT_FREE_DAILY_LIMIT) || 10,
+    freeDailyLimit: parseInt(process.env.CHAT_FREE_DAILY_LIMIT) || 5,
     premiumDailyLimit: parseInt(process.env.CHAT_PREMIUM_DAILY_LIMIT) || 100,
     contextMessages: parseInt(process.env.CHAT_CONTEXT_MESSAGES) || 10
   },

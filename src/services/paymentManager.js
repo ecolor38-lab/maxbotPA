@@ -45,7 +45,21 @@ export class PaymentManager {
           },
           capture: true,
           metadata: { user_id: userId },
-          description: 'Premium-доступ AI Chat на 1 месяц'
+          description: 'Premium-доступ AI Chat на 1 месяц',
+          receipt: {
+            customer: { email: 'noreply@neuro-news.ru' },
+            items: [{
+              description: 'Premium-доступ AI Chat (1 месяц)',
+              quantity: '1.00',
+              amount: {
+                value: `${this.PREMIUM_PRICE}.00`,
+                currency: 'RUB'
+              },
+              vat_code: 1,
+              payment_subject: 'service',
+              payment_mode: 'full_payment'
+            }]
+          }
         },
         {
           auth: {

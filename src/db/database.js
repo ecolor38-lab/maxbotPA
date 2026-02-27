@@ -161,6 +161,7 @@ function initTables(db) {
       first_name TEXT,
       model TEXT NOT NULL DEFAULT 'gpt-4o-mini',
       messages_today INTEGER NOT NULL DEFAULT 0,
+      images_today INTEGER NOT NULL DEFAULT 0,
       last_message_date TEXT,
       is_subscribed INTEGER NOT NULL DEFAULT 0,
       is_premium INTEGER NOT NULL DEFAULT 0,
