@@ -1,7 +1,6 @@
 import fs from 'fs/promises';
 import { existsSync, writeFileSync, unlinkSync } from 'fs';
 import path from 'path';
-import os from 'os';
 
 export class ContentPlanner {
   constructor() {
@@ -12,7 +11,7 @@ export class ContentPlanner {
   }
 
   findWritableDir() {
-    const dirs = [process.cwd(), '/tmp/ai-bot', path.join(os.tmpdir(), 'ai-bot')];
+    const dirs = [process.cwd(), '/tmp/ai-bot'];
     for (const dir of dirs) {
       try {
         const testFile = path.join(dir, '.test');
@@ -35,16 +34,20 @@ export class ContentPlanner {
     }
   }
 
-  async savePlan(plan) {
+  async saveJSON(filePath, data) {
     try {
-      const dir = path.dirname(this.planFile);
+      const dir = path.dirname(filePath);
       if (!existsSync(dir)) {
         await fs.mkdir(dir, { recursive: true });
       }
-      await fs.writeFile(this.planFile, JSON.stringify(plan, null, 2));
+      await fs.writeFile(filePath, JSON.stringify(data, null, 2));
     } catch (error) {
-      console.warn('⚠️ Не удалось сохранить план:', error.message);
+      console.warn(`⚠️ Не удалось сохранить ${path.basename(filePath)}:`, error.message);
     }
+  }
+
+  async savePlan(plan) {
+    await this.saveJSON(this.planFile, plan);
   }
 
   async addArticlesToPlan(articles) {
@@ -68,18 +71,13 @@ export class ContentPlanner {
     return posts;
   }
 
-  async getNextPost() {
-    const plan = await this.loadPlan();
-    return plan.queue.find((p) => p.status === 'pending') || null;
-  }
-
   async markAsPublished(postId, result) {
     const plan = await this.loadPlan();
     const post = plan.queue.find((p) => p.id === postId);
     if (post) {
       post.status = 'published';
       post.publishedAt = new Date().toISOString();
-      post.messageId = result?.result?.message_id;
+      post.messageId = result?.message?.body?.mid;
       await this.savePlan(plan);
     }
   }
@@ -121,15 +119,7 @@ export class ContentPlanner {
   }
 
   async savePublishedUrls(urls) {
-    try {
-      const dir = path.dirname(this.publishedFile);
-      if (!existsSync(dir)) {
-        await fs.mkdir(dir, { recursive: true });
-      }
-      await fs.writeFile(this.publishedFile, JSON.stringify(urls, null, 2));
-    } catch (error) {
-      console.warn('⚠️ Не удалось сохранить опубликованные URL:', error.message);
-    }
+    await this.saveJSON(this.publishedFile, urls);
   }
 
   async filterNewArticles(articles) {

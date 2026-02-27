@@ -1,26 +1,53 @@
 import express from 'express';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { config } from './src/config/config.js';
 import { AIBusinessBot } from './src/index.js';
 import { BotScheduler } from './src/scheduler.js';
 import { ContentPlanner } from './src/services/contentPlanner.js';
+import { CallbackHandler } from './src/services/callbackHandler.js';
+import {
+  getAnalyticsOverview,
+  getAnalyticsByType,
+  getAnalyticsByTime,
+  getAnalyticsTopics,
+  getAnalyticsGrowth
+} from './src/services/analyticsService.js';
+import { AdManager } from './src/services/adManager.js';
 
-// Защита от падений
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err.message);
+  process.exit(1);
 });
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Rejection:', err);
 });
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
+const API_SECRET = process.env.API_SECRET || null;
 
 app.use(express.json());
+app.use('/public', express.static(path.join(__dirname, 'public')));
 
-// Services (ленивая инициализация)
+function parseDays(query, defaultDays = 30) {
+  return Math.min(Math.max(parseInt(query) || defaultDays, 1), 365);
+}
+
+function requireAuth(req, res, next) {
+  if (!API_SECRET) return next();
+  const token = req.headers.authorization;
+  if (token !== `Bearer ${API_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 let bot = null;
 let scheduler = null;
 let contentPlanner = null;
+let callbackHandler = null;
 
 function initServices() {
   try {
@@ -33,31 +60,45 @@ function initServices() {
   }
 }
 
-// Health check (без инициализации)
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
-// API info
 app.get('/', (req, res) => {
   res.json({
     name: 'AI Business Bot',
     version: '1.0.0',
-    endpoints: ['/health', '/api/bot/run', '/api/bot/status', '/api/content/stats']
+    endpoints: [
+      '/health',
+      '/api/bot/run',
+      '/api/bot/status',
+      '/api/content/stats',
+      '/api/analytics/overview',
+      '/api/analytics/types',
+      '/api/analytics/times',
+      '/api/analytics/topics',
+      '/api/analytics/growth',
+      '/api/ads/pricing',
+      '/api/ads/campaigns',
+      '/api/ads/slots',
+      '/api/ads/stats'
+    ]
   });
 });
 
-// Bot status
 app.get('/api/bot/status', (req, res) => {
   res.json({
     running: !!bot,
-    telegram: !!config.telegram?.botToken,
+    max: !!config.max?.botToken,
     ai: !!config.anthropic?.apiKey || !!config.openai?.apiKey
   });
 });
 
-// Run bot
-app.post('/api/bot/run', async (req, res) => {
+app.post('/api/bot/run', requireAuth, async (req, res) => {
   initServices();
   if (!bot) return res.status(500).json({ error: 'Бот не инициализирован' });
 
@@ -65,7 +106,6 @@ app.post('/api/bot/run', async (req, res) => {
   bot.run().catch((e) => console.error('Ошибка бота:', e.message));
 });
 
-// Content stats
 app.get('/api/content/stats', async (req, res) => {
   initServices();
   if (!contentPlanner) return res.status(500).json({ error: 'Planner не готов' });
@@ -78,8 +118,7 @@ app.get('/api/content/stats', async (req, res) => {
   }
 });
 
-// Collect news
-app.post('/api/content/collect', async (req, res) => {
+app.post('/api/content/collect', requireAuth, async (req, res) => {
   initServices();
   if (!scheduler) return res.status(500).json({ error: 'Scheduler не готов' });
 
@@ -87,7 +126,88 @@ app.post('/api/content/collect', async (req, res) => {
   scheduler.collectAndPlan().catch((e) => console.error('Ошибка сбора:', e.message));
 });
 
-// Error handlers
+app.get('/api/analytics/overview', (req, res) => {
+  try { res.json(getAnalyticsOverview(parseDays(req.query.days, 7))); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/types', (req, res) => {
+  try { res.json(getAnalyticsByType(parseDays(req.query.days))); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/times', (req, res) => {
+  try { res.json(getAnalyticsByTime(parseDays(req.query.days))); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/topics', (req, res) => {
+  try { res.json(getAnalyticsTopics(parseDays(req.query.days))); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/analytics/growth', (req, res) => {
+  try { res.json(getAnalyticsGrowth(parseDays(req.query.days))); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+const adManager = new AdManager();
+
+app.get('/api/ads/pricing', (req, res) => {
+  try {
+    res.json(adManager.getPricing());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/ads/campaigns', requireAuth, (req, res) => {
+  try {
+    const status = req.query.status || null;
+    res.json(adManager.listCampaigns(status));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/ads/campaigns', requireAuth, (req, res) => {
+  try {
+    const { clientName, brief, slot, scheduledDate, price } = req.body;
+    if (!clientName) return res.status(400).json({ error: 'clientName required' });
+    const validSlots = ['morning', 'day', 'evening'];
+    if (slot && !validSlots.includes(slot)) return res.status(400).json({ error: `slot must be one of: ${validSlots.join(', ')}` });
+    if (price !== undefined && (typeof price !== 'number' || price < 0)) return res.status(400).json({ error: 'price must be a positive number' });
+    if (brief && brief.length > 2000) return res.status(400).json({ error: 'brief must be under 2000 characters' });
+    const result = adManager.createCampaign({ clientName, brief, slot, scheduledDate, price });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/ads/slots', (req, res) => {
+  try {
+    const pricing = adManager.getPricing();
+    const todayCampaigns = adManager.getScheduledForToday();
+    const bookedSlots = todayCampaigns.map((c) => c.slot);
+    const available = {};
+    for (const [slot, info] of Object.entries(pricing.slots)) {
+      available[slot] = { ...info, booked: bookedSlots.includes(slot) };
+    }
+    res.json({ date: new Date().toISOString().split('T')[0], slots: available });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/ads/stats', requireAuth, (req, res) => {
+  try {
+    res.json(adManager.getAdStats());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.use((err, req, res, _next) => {
   console.error('Express Error:', err.message);
   res.status(500).json({ error: err.message });
@@ -97,23 +217,25 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-// Start server
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
 
-  // Auto-start scheduler
   if (process.env.AUTO_START_SCHEDULER === 'true') {
     initServices();
     if (scheduler) {
       scheduler.start();
       console.log('⏰ Scheduler started');
     }
+
+    callbackHandler = new CallbackHandler();
+    callbackHandler.start().catch((e) => console.error('❌ CallbackHandler ошибка:', e.message));
+    console.log('🔘 CallbackHandler started');
   }
 });
 
-// Graceful shutdown
 const shutdown = () => {
   console.log('👋 Shutting down...');
+  if (callbackHandler) callbackHandler.stop();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 10000);
 };

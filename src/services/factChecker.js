@@ -34,7 +34,7 @@ export class FactChecker {
       }
 
       // Для соцсетей - проверка через AI
-      if (article.isSocial && (this.anthropic || this.openai)) {
+      if (article.type === 'social' && (this.anthropic || this.openai)) {
         try {
           // eslint-disable-next-line no-await-in-loop
           const result = await this.verifyWithAI(article);
@@ -65,9 +65,7 @@ export class FactChecker {
   }
 
   getQuickCredibility(article) {
-    const title = (article.title || '').toLowerCase();
-    const snippet = (article.snippet || '').toLowerCase();
-    const text = title + ' ' + snippet;
+    const text = `${article.title || ''} ${article.snippet || ''}`.toLowerCase();
 
     // Официальные блоги компаний - максимальное доверие
     const officialSources = ['openai', 'anthropic', 'google ai', 'meta ai', 'microsoft'];
@@ -131,36 +129,26 @@ export class FactChecker {
 - score: 90+ = очень надёжно, 70-89 = надёжно, 50-69 = сомнительно, <50 = ненадёжно`;
 
     try {
-      let response;
+      const response = this.anthropic
+        ? (await this.anthropic.messages.create({
+            model: this.config?.anthropic?.model || 'claude-sonnet-4-20250514',
+            max_tokens: 200,
+            messages: [{ role: 'user', content: prompt }]
+          })).content[0].text
+        : (await this.openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 200,
+            temperature: 0.3
+          })).choices[0].message.content;
 
-      if (this.anthropic) {
-        const result = await this.anthropic.messages.create({
-          model: 'claude-3-haiku-20240307',
-          max_tokens: 200,
-          messages: [{ role: 'user', content: prompt }]
-        });
-        response = result.content[0].text;
-      } else if (this.openai) {
-        const result = await this.openai.chat.completions.create({
-          model: 'gpt-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 200,
-          temperature: 0.3
-        });
-        response = result.choices[0].message.content;
-      }
-
-      // Парсим JSON из ответа
       const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-
-      return { isReliable: true, score: 70, note: 'Не удалось распарсить' };
+      return jsonMatch
+        ? JSON.parse(jsonMatch[0])
+        : { isReliable: true, score: 70, note: 'Не удалось распарсить' };
     } catch (error) {
       console.log(`      AI error: ${error.message}`);
       return { isReliable: false, score: 0, note: 'Ошибка проверки' };
     }
   }
 }
-

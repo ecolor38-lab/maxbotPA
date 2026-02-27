@@ -2,8 +2,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Валидация
-if (!process.env.TELEGRAM_BOT_TOKEN) {
-  console.warn('⚠️ TELEGRAM_BOT_TOKEN не установлен');
+if (!process.env.MAX_BOT_TOKEN) {
+  console.warn('⚠️ MAX_BOT_TOKEN не установлен');
 }
 
 if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
@@ -11,9 +11,10 @@ if (!process.env.ANTHROPIC_API_KEY && !process.env.OPENAI_API_KEY) {
 }
 
 export const config = {
-  telegram: {
-    botToken: process.env.TELEGRAM_BOT_TOKEN,
-    channelId: process.env.TELEGRAM_CHANNEL_ID
+  max: {
+    botToken: process.env.MAX_BOT_TOKEN,
+    chatId: process.env.MAX_CHAT_ID ? parseInt(process.env.MAX_CHAT_ID) : null,
+    chatLink: process.env.MAX_CHAT_LINK || null
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
@@ -21,7 +22,7 @@ export const config = {
   },
   anthropic: {
     apiKey: process.env.ANTHROPIC_API_KEY,
-    model: process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307'
+    model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514'
   },
   search: {
     daysBack: parseInt(process.env.SEARCH_DAYS_BACK) || 2

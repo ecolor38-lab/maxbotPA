@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нейро.Новости — Дашборд</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e1e4e8; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #1a1f36 0%, #0d1025 100%); padding: 24px 32px; border-bottom: 1px solid #2d3148; }
+  .header h1 { font-size: 22px; font-weight: 600; }
+  .header h1 span { color: #7c6ff7; }
+  .header .subtitle { color: #8b8fa3; font-size: 13px; margin-top: 4px; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .card { background: #161b2e; border: 1px solid #2d3148; border-radius: 12px; padding: 20px; }
+  .card-title { font-size: 12px; color: #8b8fa3; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .card-value { font-size: 32px; font-weight: 700; }
+  .card-value.green { color: #3fb950; }
+  .card-value.blue { color: #58a6ff; }
+  .card-value.purple { color: #bc8cff; }
+  .card-value.orange { color: #f0883e; }
+  .card-sub { font-size: 13px; color: #8b8fa3; margin-top: 4px; }
+  .card-sub .up { color: #3fb950; }
+  .card-sub .down { color: #f85149; }
+  .section { background: #161b2e; border: 1px solid #2d3148; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 10px 12px; font-size: 12px; color: #8b8fa3; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #2d3148; }
+  td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid #1e2340; }
+  tr:hover td { background: #1a2040; }
+  .bar-container { width: 100%; height: 8px; background: #1e2340; border-radius: 4px; overflow: hidden; }
+  .bar { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .bar.blue { background: #58a6ff; }
+  .bar.green { background: #3fb950; }
+  .bar.purple { background: #bc8cff; }
+  .bar.orange { background: #f0883e; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+  .tag.news_flash { background: #1a3a2a; color: #3fb950; }
+  .tag.analysis { background: #1a2a3a; color: #58a6ff; }
+  .tag.digest { background: #2a1a3a; color: #bc8cff; }
+  .tag.tip { background: #3a2a1a; color: #f0883e; }
+  .tag.prediction { background: #3a1a2a; color: #f778ba; }
+  .tag.hot_take { background: #3a2a1a; color: #f85149; }
+  .tag.series { background: #1a3a3a; color: #56d4dd; }
+  .tag.sponsored { background: #2a2a1a; color: #d4b856; }
+  .growth-chart { display: flex; align-items: flex-end; gap: 2px; height: 80px; padding-top: 8px; }
+  .growth-bar { flex: 1; background: #58a6ff; border-radius: 2px 2px 0 0; min-width: 4px; transition: height 0.4s ease; }
+  .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .price-card { background: #1a2040; border-radius: 8px; padding: 16px; text-align: center; }
+  .price-card .label { font-size: 13px; color: #8b8fa3; }
+  .price-card .price { font-size: 24px; font-weight: 700; color: #3fb950; margin: 8px 0; }
+  .price-card .time { font-size: 12px; color: #8b8fa3; }
+  .loading { text-align: center; padding: 40px; color: #8b8fa3; }
+  .error { color: #f85149; padding: 12px; background: #2d1a1a; border-radius: 8px; margin-bottom: 16px; }
+  .refresh-btn { float: right; background: #2d3148; color: #e1e4e8; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .refresh-btn:hover { background: #3d4168; }
+  .top-post { padding: 12px 0; border-bottom: 1px solid #1e2340; }
+  .top-post:last-child { border-bottom: none; }
+  .top-post .text { font-size: 14px; line-height: 1.4; margin-bottom: 4px; }
+  .top-post .meta { font-size: 12px; color: #8b8fa3; }
+  .top-post .clicks { color: #3fb950; font-weight: 600; }
+  .empty { color: #8b8fa3; font-style: italic; padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <button class="refresh-btn" onclick="loadAll()">Обновить</button>
+  <h1><span>Нейро.Новости</span> — Аналитика</h1>
+  <div class="subtitle" id="lastUpdated">Загрузка...</div>
+</div>
+
+<div class="container">
+  <!-- KPI Cards -->
+  <div class="grid" id="kpiCards">
+    <div class="card"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <!-- Post Types -->
+  <div class="section">
+    <div class="section-title">Эффективность по типам постов</div>
+    <div id="typesTable"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <!-- Top Posts -->
+  <div class="section">
+    <div class="section-title">Топ постов за неделю</div>
+    <div id="topPosts"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <!-- Growth Chart -->
+  <div class="section">
+    <div class="section-title">Рост подписчиков</div>
+    <div id="growthChart"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <!-- Time Analysis -->
+  <div class="section">
+    <div class="section-title">Активность по часам</div>
+    <div id="timesChart"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <!-- Topics -->
+  <div class="section">
+    <div class="section-title">Популярные темы</div>
+    <div id="topicsTable"><div class="loading">Загрузка...</div></div>
+  </div>
+
+  <!-- Ad Pricing -->
+  <div class="section">
+    <div class="section-title">Рекламный прайс</div>
+    <div id="adPricing"><div class="loading">Загрузка...</div></div>
+  </div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+async function fetchJSON(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+async function loadAll() {
+  document.getElementById('lastUpdated').textContent = 'Обновление...';
+  try {
+    await Promise.all([loadOverview(), loadTypes(), loadGrowth(), loadTimes(), loadTopics(), loadPricing()]);
+    document.getElementById('lastUpdated').textContent = `Обновлено: ${new Date().toLocaleString('ru-RU')}`;
+  } catch (e) {
+    document.getElementById('lastUpdated').textContent = `Ошибка: ${e.message}`;
+  }
+}
+
+async function loadOverview() {
+  try {
+    const d = await fetchJSON('/api/analytics/overview?days=7');
+    const growth = await fetchJSON('/api/analytics/growth?days=30');
+    const growthStr = growth.net_growth >= 0 ? `<span class="up">+${growth.net_growth}</span>` : `<span class="down">${growth.net_growth}</span>`;
+
+    document.getElementById('kpiCards').innerHTML = `
+      <div class="card">
+        <div class="card-title">Подписчики</div>
+        <div class="card-value blue">${d.subscribers ?? '—'}</div>
+        <div class="card-sub">за 30 дней: ${growthStr}</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Постов за неделю</div>
+        <div class="card-value purple">${d.total_posts}</div>
+        <div class="card-sub">${Math.round(d.total_posts / 7 * 10) / 10} в день</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Реакций за неделю</div>
+        <div class="card-value green">${d.total_clicks}</div>
+        <div class="card-sub">позитивных: ${d.positive_clicks}</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Avg реакций / пост</div>
+        <div class="card-value orange">${d.avg_clicks_per_post}</div>
+        <div class="card-sub">engagement proxy</div>
+      </div>
+    `;
+
+    // Top posts
+    if (d.top_posts && d.top_posts.length > 0) {
+      document.getElementById('topPosts').innerHTML = d.top_posts.map(p => `
+        <div class="top-post">
+          <div class="text">${escapeHtml(p.text?.substring(0, 150) || '—')}${p.text?.length > 150 ? '...' : ''}</div>
+          <div class="meta">
+            <span class="tag ${p.post_type}">${p.post_type}</span>
+            <span class="clicks">${p.click_count} реакций</span>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      document.getElementById('topPosts').innerHTML = '<div class="empty">Пока нет данных. Посты начнут появляться после публикаций.</div>';
+    }
+  } catch (e) {
+    document.getElementById('kpiCards').innerHTML = `<div class="error">Ошибка: ${e.message}</div>`;
+  }
+}
+
+async function loadTypes() {
+  try {
+    const data = await fetchJSON('/api/analytics/types?days=30');
+    if (!data.length) {
+      document.getElementById('typesTable').innerHTML = '<div class="empty">Нет данных. Появятся после 2+ недель публикаций.</div>';
+      return;
+    }
+    const maxClicks = Math.max(...data.map(d => d.avg_clicks_per_post), 1);
+    document.getElementById('typesTable').innerHTML = `<table>
+      <tr><th>Тип</th><th>Постов</th><th>Кликов</th><th>Avg / пост</th><th></th></tr>
+      ${data.map(d => `<tr>
+        <td><span class="tag ${d.post_type}">${d.post_type}</span></td>
+        <td>${d.post_count}</td>
+        <td>${d.total_clicks}</td>
+        <td>${d.avg_clicks_per_post}</td>
+        <td style="width:40%"><div class="bar-container"><div class="bar blue" style="width:${(d.avg_clicks_per_post / maxClicks * 100)}%"></div></div></td>
+      </tr>`).join('')}
+    </table>`;
+  } catch (e) {
+    document.getElementById('typesTable').innerHTML = `<div class="error">${e.message}</div>`;
+  }
+}
+
+async function loadGrowth() {
+  try {
+    const data = await fetchJSON('/api/analytics/growth?days=30');
+    const points = data.data_points || [];
+    if (!points.length) {
+      document.getElementById('growthChart').innerHTML = '<div class="empty">Нет данных о росте.</div>';
+      return;
+    }
+    const max = Math.max(...points.map(p => p.subscribers));
+    const min = Math.min(...points.map(p => p.subscribers));
+    const range = max - min || 1;
+
+    document.getElementById('growthChart').innerHTML = `
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:12px;color:#8b8fa3">
+        <span>${points[0]?.date || ''}</span>
+        <span>Текущие: <strong style="color:#58a6ff">${data.current_subscribers ?? '?'}</strong> | Рост: <strong style="color:${data.net_growth >= 0 ? '#3fb950' : '#f85149'}">${data.net_growth >= 0 ? '+' : ''}${data.net_growth}</strong></span>
+        <span>${points[points.length-1]?.date || ''}</span>
+      </div>
+      <div class="growth-chart">
+        ${points.map(p => `<div class="growth-bar" style="height:${Math.max(10, ((p.subscribers - min) / range) * 100)}%" title="${p.date}: ${p.subscribers}"></div>`).join('')}
+      </div>
+    `;
+  } catch (e) {
+    document.getElementById('growthChart').innerHTML = `<div class="error">${e.message}</div>`;
+  }
+}
+
+async function loadTimes() {
+  try {
+    const data = await fetchJSON('/api/analytics/times?days=30');
+    if (!data.length) {
+      document.getElementById('timesChart').innerHTML = '<div class="empty">Нет данных по времени.</div>';
+      return;
+    }
+    const maxClicks = Math.max(...data.map(d => d.avg_clicks), 1);
+
+    document.getElementById('timesChart').innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:4px;height:100px">
+        ${Array.from({length: 24}, (_, h) => {
+          const entry = data.find(d => d.hour === h);
+          const val = entry?.avg_clicks || 0;
+          const posts = entry?.post_count || 0;
+          const height = maxClicks > 0 ? (val / maxClicks * 100) : 0;
+          const color = posts > 0 ? '#58a6ff' : '#1e2340';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center">
+            <div style="width:100%;height:${Math.max(2, height)}px;background:${color};border-radius:2px 2px 0 0" title="${h}:00 — ${val} avg, ${posts} постов"></div>
+            <div style="font-size:9px;color:#8b8fa3;margin-top:4px">${h}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+  } catch (e) {
+    document.getElementById('timesChart').innerHTML = `<div class="error">${e.message}</div>`;
+  }
+}
+
+async function loadTopics() {
+  try {
+    const data = await fetchJSON('/api/analytics/topics?days=30');
+    if (!data.length) {
+      document.getElementById('topicsTable').innerHTML = '<div class="empty">Нет данных по темам. Появятся после публикаций.</div>';
+      return;
+    }
+    const maxAvg = Math.max(...data.map(d => d.avgClicks), 1);
+    document.getElementById('topicsTable').innerHTML = `<table>
+      <tr><th>Тема</th><th>Постов</th><th>Кликов</th><th>Avg</th><th></th></tr>
+      ${data.slice(0, 15).map(d => `<tr>
+        <td><strong>${d.topic}</strong></td>
+        <td>${d.posts}</td>
+        <td>${d.clicks}</td>
+        <td>${d.avgClicks}</td>
+        <td style="width:30%"><div class="bar-container"><div class="bar purple" style="width:${(d.avgClicks / maxAvg * 100)}%"></div></div></td>
+      </tr>`).join('')}
+    </table>`;
+  } catch (e) {
+    document.getElementById('topicsTable').innerHTML = `<div class="error">${e.message}</div>`;
+  }
+}
+
+async function loadPricing() {
+  try {
+    const data = await fetchJSON('/api/ads/pricing');
+    const stats = await fetchJSON('/api/ads/slots').catch(() => null);
+
+    document.getElementById('adPricing').innerHTML = `
+      <div style="margin-bottom:16px;font-size:13px;color:#8b8fa3">
+        Формула: <code>${data.formula}</code> | Подписчиков: <strong>${data.subscribers}</strong>
+      </div>
+      <div class="pricing-grid">
+        ${Object.entries(data.slots).map(([key, slot]) => {
+          const booked = stats?.slots?.[key]?.booked;
+          return `<div class="price-card">
+            <div class="label">${slot.label}</div>
+            <div class="price">${slot.price} &#8381;</div>
+            <div class="time">${slot.time}</div>
+            ${booked ? '<div style="color:#f85149;font-size:11px;margin-top:4px">Занят</div>' : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:16px">
+        <div class="section-title" style="font-size:14px">Пакеты</div>
+        <table>
+          <tr><th>Пакет</th><th>Постов</th><th>Цена</th><th>Скидка</th></tr>
+          ${Object.entries(data.packages).map(([key, pkg]) => `<tr>
+            <td>${key}</td><td>${pkg.posts}</td><td><strong>${pkg.price} &#8381;</strong></td><td>${pkg.discount ? pkg.discount + '%' : '—'}</td>
+          </tr>`).join('')}
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    document.getElementById('adPricing').innerHTML = `<div class="error">${e.message}</div>`;
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+loadAll();
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>

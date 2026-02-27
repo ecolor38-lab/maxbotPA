@@ -2,16 +2,20 @@ import { config } from './config/config.js';
 import { AIBusinessNewsCollector } from './services/aiBusinessNewsCollector.js';
 import { AISummarizer } from './services/aiSummarizer.js';
 import { HashtagGenerator } from './services/hashtagGenerator.js';
-import { TelegramPublisherNative } from './services/telegramPublisherNative.js';
+import { ImageGenerator } from './services/imageGenerator.js';
+import { MaxPublisher } from './services/maxPublisher.js';
 import { ContentPlanner } from './services/contentPlanner.js';
 import { FactChecker } from './services/factChecker.js';
+import { savePost } from './db/database.js';
+import { extractTopics } from './services/analyticsService.js';
 
 export class AIBusinessBot {
   constructor() {
     this.newsCollector = new AIBusinessNewsCollector(config);
     this.summarizer = new AISummarizer(config);
     this.hashtagGenerator = new HashtagGenerator(config);
-    this.publisher = new TelegramPublisherNative(config);
+    this.imageGenerator = new ImageGenerator(config);
+    this.publisher = new MaxPublisher(config);
     this.planner = new ContentPlanner();
     this.factChecker = new FactChecker(config);
   }
@@ -22,10 +26,7 @@ export class AIBusinessBot {
     try {
       await this.publisher.testConnection();
 
-      // 1. Сбор новостей из всех источников (включая соцсети)
       let articles = await this.newsCollector.collectNews();
-
-      // 2. Фильтрация дубликатов - убираем уже опубликованные
       articles = await this.planner.filterNewArticles(articles);
 
       if (!articles.length) {
@@ -33,7 +34,6 @@ export class AIBusinessBot {
         return { skipped: true, reason: 'no_new_articles' };
       }
 
-      // 3. Проверка на фейки и спам
       articles = await this.factChecker.checkArticles(articles);
 
       if (!articles.length) {
@@ -43,60 +43,73 @@ export class AIBusinessBot {
 
       console.log(`\n📚 Генерация поста из ${articles.length} проверенных статей...\n`);
 
-      // 4. Генерация поста
-      const text = await this.summarizer.generateSummary(articles);
-      if (!text) throw new Error('Не удалось сгенерировать текст');
-
-      const hashtags = this.hashtagGenerator.generateHashtags(text);
-
-      console.log('\n📝 Пост:\n' + '─'.repeat(50));
-      console.log(text);
-      console.log(hashtags);
-      console.log('─'.repeat(50) + '\n');
-
-      // 5. Публикация
-      const result = await this.publisher.publish(text, hashtags, null, articles);
-
-      // 6. Сохраняем URL как опубликованные
-      await this.planner.markUrlsAsPublished(articles);
-
-      console.log('✅ Готово!');
-      return result;
+      const postType = this.summarizer.pickPostType().key;
+      return await this._publishArticles(articles, postType, true);
     } catch (error) {
       console.error('❌ Ошибка:', error.message);
       throw error;
     }
   }
 
-  async generateAndPublish(articles) {
-    // Фильтрация дубликатов
+  async generateAndPublish(articles, forceType = null) {
     let newArticles = await this.planner.filterNewArticles(articles);
     if (!newArticles.length) {
       console.log('⚠️ Все статьи уже были опубликованы');
       return { skipped: true };
     }
 
-    // Проверка на фейки
     newArticles = await this.factChecker.checkArticles(newArticles);
     if (!newArticles.length) {
       console.log('⚠️ Статьи не прошли проверку');
       return { skipped: true, reason: 'fact_check_failed' };
     }
 
-    const text = await this.summarizer.generateSummary(newArticles);
+    const postType = forceType || this.summarizer.pickPostType().key;
+    return await this._publishArticles(newArticles, postType, false);
+  }
+
+  async _publishArticles(articles, postType, verbose = false) {
+    const text = await this.summarizer.generateSummary(articles, postType);
     if (!text) throw new Error('Не удалось сгенерировать текст');
 
     const hashtags = this.hashtagGenerator.generateHashtags(text);
-    const result = await this.publisher.publish(text, hashtags, null, newArticles);
+    const imageUrl = await this.imageGenerator.generateImage(text);
 
-    // Сохраняем как опубликованные
-    await this.planner.markUrlsAsPublished(newArticles);
+    if (verbose) {
+      console.log('\n📝 Пост:\n' + '─'.repeat(50));
+      console.log(text);
+      console.log(hashtags);
+      if (imageUrl) console.log(`🖼️ Обложка: ${imageUrl.substring(0, 80)}...`);
+      console.log('─'.repeat(50) + '\n');
+    }
 
-    return result;
+    const result = await this.publisher.publish(text, hashtags, imageUrl, articles, postType);
+
+    const messageId = result?.message?.body?.mid || null;
+    const topics = extractTopics(text);
+    const sources = articles.filter((a) => a.url).map((a) => ({ url: a.url, source: a.source }));
+    try {
+      savePost({
+        messageId: messageId ? String(messageId) : null,
+        postType,
+        text,
+        hashtags,
+        imageUrl,
+        sources,
+        topics
+      });
+      if (verbose) console.log('💾 Пост сохранён в аналитику');
+    } catch (e) {
+      console.warn('⚠️ Не удалось сохранить в SQLite:', e.message);
+    }
+
+    await this.planner.markUrlsAsPublished(articles);
+
+    if (verbose) console.log('✅ Готово!');
+    return { ...result, postType };
   }
 }
 
-// Запуск напрямую
 if (process.argv[1]?.includes('index.js')) {
   const bot = new AIBusinessBot();
   bot
