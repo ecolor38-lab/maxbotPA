@@ -52,34 +52,50 @@ const ART_STYLES = [
 ];
 
 const TOPIC_VISUALS = [
-  { keywords: ['робот', 'robot', 'humanoid'], theme: 'humanoid robot in a real-world environment' },
-  { keywords: ['медицин', 'health', 'диагност', 'врач'], theme: 'AI-powered medical technology and healthcare innovation' },
-  { keywords: ['авто', 'беспилот', 'tesla', 'waymo'], theme: 'autonomous vehicle technology and smart transportation' },
-  { keywords: ['генера', 'картин', 'midjourney', 'dall-e', 'изображени'], theme: 'AI-generated art and creative AI tools' },
-  { keywords: ['безопасност', 'security', 'кибер', 'хакер'], theme: 'digital security shield protecting data networks' },
-  { keywords: ['бизнес', 'стартап', 'invest', 'funding'], theme: 'tech startup innovation and venture capital' },
-  { keywords: ['чат', 'gpt', 'claude', 'llm', 'языков'], theme: 'conversational AI assistant interface' },
-  { keywords: ['код', 'program', 'разработ', 'developer', 'copilot'], theme: 'AI-assisted software development and coding' },
-  { keywords: ['google', 'gemini'], theme: 'Google AI ecosystem and search intelligence' },
-  { keywords: ['openai'], theme: 'OpenAI research lab and frontier AI models' },
-  { keywords: ['apple', 'siri'], theme: 'Apple devices with integrated AI intelligence' },
-  { keywords: ['nvidia', 'чип', 'gpu', 'процессор'], theme: 'high-performance AI computing hardware and chips' },
-  { keywords: ['образовани', 'обучени', 'студент'], theme: 'AI transforming education and personalized learning' },
-  { keywords: ['музык', 'suno', 'audio'], theme: 'AI music generation and audio synthesis' },
-  { keywords: ['видео', 'sora', 'runway', 'генерац видео'], theme: 'AI video generation and visual storytelling' },
-  { keywords: ['закон', 'регулиров', 'запрет', 'ban'], theme: 'government regulation of AI technology' },
-  { keywords: ['агент', 'agent', 'автоном'], theme: 'autonomous AI agents working independently' }
+  // Технологии и устройства
+  { keywords: ['робот', 'robot', 'humanoid'], theme: 'elegant humanoid robot interacting with people in a sunlit modern office' },
+  { keywords: ['медицин', 'health', 'диагност', 'врач'], theme: 'futuristic hospital room with holographic medical displays, a doctor reviewing AI-generated scans' },
+  { keywords: ['авто', 'беспилот', 'tesla', 'waymo'], theme: 'sleek autonomous car driving through a beautiful city at golden hour' },
+  { keywords: ['дрон', 'drone', 'бпла'], theme: 'swarm of delivery drones flying over a modern city at sunset' },
+  { keywords: ['смартфон', 'iphone', 'телефон', 'гаджет'], theme: 'person holding a glowing smartphone with AI interface floating above the screen' },
+  { keywords: ['очки', 'vr', 'ar', 'meta quest', 'vision pro'], theme: 'person wearing sleek AR glasses in a beautiful natural setting with holographic overlays' },
+
+  // ИИ-сервисы
+  { keywords: ['генера', 'картин', 'midjourney', 'dall-e', 'изображени'], theme: 'magical artist studio where paintings create themselves, brushes floating in air, colorful canvases' },
+  { keywords: ['чат', 'gpt', 'claude', 'llm', 'языков'], theme: 'cozy workspace with a glowing AI assistant hovering above a desk, warm ambient lighting' },
+  { keywords: ['код', 'program', 'разработ', 'developer', 'copilot'], theme: 'developer workspace with floating holographic code, warm coffee on desk, city view through window' },
+  { keywords: ['google', 'gemini'], theme: 'vast modern data center with colorful lights reflecting off glass surfaces' },
+  { keywords: ['openai'], theme: 'clean minimalist research lab with glowing neural network visualization' },
+  { keywords: ['apple', 'siri'], theme: 'elegant Apple-style product on a marble surface with soft natural light' },
+  { keywords: ['nvidia', 'чип', 'gpu', 'процессор'], theme: 'macro shot of a beautiful glowing processor chip with light trails flowing through circuits' },
+  { keywords: ['яндекс', 'yandex', 'сбер', 'gigachat'], theme: 'modern Moscow tech campus with glass buildings reflecting sunrise' },
+
+  // Области применения
+  { keywords: ['безопасност', 'security', 'кибер', 'хакер'], theme: 'dramatic cybersecurity command center with multiple screens showing threat maps, blue and red lighting' },
+  { keywords: ['бизнес', 'стартап', 'invest', 'funding'], theme: 'modern co-working space with diverse team celebrating a product launch, champagne and laptops' },
+  { keywords: ['образовани', 'обучени', 'студент', 'школ'], theme: 'futuristic classroom with students using holographic displays, warm sunlight through large windows' },
+  { keywords: ['музык', 'suno', 'audio', 'звук'], theme: 'professional music studio with glowing AI waveforms flowing from speakers, warm wood interior' },
+  { keywords: ['видео', 'sora', 'runway', 'генерац видео'], theme: 'film director chair facing multiple floating screens showing different AI-generated scenes' },
+  { keywords: ['закон', 'регулиров', 'запрет', 'ban'], theme: 'dramatic courthouse with scales of justice, one side holding a glowing AI chip, moody lighting' },
+  { keywords: ['агент', 'agent', 'автоном'], theme: 'network of glowing AI nodes connecting across a beautiful cityscape at twilight' },
+  { keywords: ['наук', 'research', 'исследовани'], theme: 'beautiful scientific laboratory with molecular visualizations floating in mid-air' },
+  { keywords: ['космос', 'space', 'nasa', 'satellite'], theme: 'Earth from orbit with constellation of AI-powered satellites, aurora borealis visible' },
+  { keywords: ['финанс', 'банк', 'крипт', 'bitcoin', 'торг'], theme: 'futuristic trading floor with holographic charts and data streams, dramatic lighting' },
+  { keywords: ['climate', 'климат', 'экологи', 'энерги'], theme: 'beautiful landscape where nature meets technology: wind turbines, solar panels, lush greenery' },
+  { keywords: ['фото', 'камер', 'photo'], theme: 'photographer reviewing AI-enhanced photos on a large display in a stylish studio' },
+  { keywords: ['перевод', 'translat', 'язык'], theme: 'beautiful globe with glowing connection lines between countries, diverse languages floating around' },
+  { keywords: ['игр', 'game', 'gaming'], theme: 'immersive gaming setup with holographic game world spilling out into the room' }
 ];
 
 const POST_TYPE_STYLE_BIAS = {
-  news_flash: ['cinematic', 'photojournalism', 'editorial'],
-  analysis: ['3d_render', 'surreal', 'abstract'],
-  digest: ['collage', 'isometric', 'editorial'],
-  tip: ['minimal', '3d_render', 'isometric'],
-  prediction: ['surreal', 'retro_futurism', 'neon_noir'],
-  hot_take: ['neon_noir', 'abstract', 'editorial'],
-  series: ['watercolor', 'isometric', '3d_render'],
-  sponsored: ['minimal', 'cinematic', '3d_render']
+  news_flash: ['cinematic', 'photojournalism', 'editorial', '3d_render', 'minimal'],
+  analysis: ['3d_render', 'surreal', 'abstract', 'cinematic', 'watercolor'],
+  digest: ['collage', 'isometric', 'editorial', 'retro_futurism'],
+  tip: ['minimal', '3d_render', 'isometric', 'watercolor'],
+  prediction: ['surreal', 'retro_futurism', 'neon_noir', 'abstract', 'cinematic'],
+  hot_take: ['neon_noir', 'abstract', 'editorial', 'cinematic', 'surreal'],
+  series: ['watercolor', 'isometric', '3d_render', 'editorial'],
+  sponsored: ['minimal', 'cinematic', '3d_render', 'photojournalism']
 };
 
 let lastStyleIndex = -1;

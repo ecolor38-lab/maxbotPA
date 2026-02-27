@@ -1,22 +1,36 @@
 import { getDb } from '../db/database.js';
 
+// Заблокированные в РФ сервисы — подменяем на российские аналоги
+const BLOCKED_REPLACEMENTS = {
+  'chat.openai.com': { name: 'GigaChat (аналог)', url: 'https://developers.sber.ru/gigachat' },
+  'claude.ai': { name: 'GigaChat (аналог)', url: 'https://developers.sber.ru/gigachat' },
+  'gemini.google.com': { name: 'YandexGPT (аналог)', url: 'https://ya.ru/ai' },
+  'labs.openai.com': { name: 'Кандинский (аналог)', url: 'https://fusionbrain.ai' },
+  'midjourney.com': { name: 'Кандинский (аналог)', url: 'https://fusionbrain.ai' },
+  'stability.ai': { name: 'Кандинский (аналог)', url: 'https://fusionbrain.ai' }
+};
+
 const DEFAULT_AFFILIATES = [
-  { keyword: 'chatgpt', name: 'ChatGPT', url: 'https://chat.openai.com', category: 'llm' },
-  { keyword: 'claude', name: 'Claude', url: 'https://claude.ai', category: 'llm' },
-  { keyword: 'gemini', name: 'Google Gemini', url: 'https://gemini.google.com', category: 'llm' },
-  { keyword: 'midjourney', name: 'Midjourney', url: 'https://midjourney.com', category: 'image' },
-  { keyword: 'dall-e', name: 'DALL-E', url: 'https://labs.openai.com', category: 'image' },
-  { keyword: 'stable diffusion', name: 'Stable Diffusion', url: 'https://stability.ai', category: 'image' },
-  { keyword: 'perplexity', name: 'Perplexity AI', url: 'https://perplexity.ai', category: 'search' },
-  { keyword: 'notion ai', name: 'Notion AI', url: 'https://notion.so', category: 'productivity' },
-  { keyword: 'copilot', name: 'GitHub Copilot', url: 'https://github.com/features/copilot', category: 'code' },
-  { keyword: 'cursor', name: 'Cursor', url: 'https://cursor.sh', category: 'code' },
-  { keyword: 'runway', name: 'Runway ML', url: 'https://runwayml.com', category: 'video' },
-  { keyword: 'suno', name: 'Suno AI', url: 'https://suno.ai', category: 'music' },
-  { keyword: 'elevenlabs', name: 'ElevenLabs', url: 'https://elevenlabs.io', category: 'voice' },
+  // Доступные в РФ без VPN
   { keyword: 'gigachat', name: 'GigaChat', url: 'https://developers.sber.ru/gigachat', category: 'llm' },
   { keyword: 'yandexgpt', name: 'YandexGPT', url: 'https://ya.ru/ai', category: 'llm' },
-  { keyword: 'kandinsky', name: 'Кандинский', url: 'https://fusionbrain.ai', category: 'image' }
+  { keyword: 'алиса', name: 'Алиса', url: 'https://ya.ru/alisa', category: 'llm' },
+  { keyword: 'kandinsky', name: 'Кандинский', url: 'https://fusionbrain.ai', category: 'image' },
+  { keyword: 'шедеврум', name: 'Шедеврум', url: 'https://shedevrum.ai', category: 'image' },
+  { keyword: 'perplexity', name: 'Perplexity AI', url: 'https://perplexity.ai', category: 'search' },
+  { keyword: 'notion ai', name: 'Notion AI', url: 'https://notion.so', category: 'productivity' },
+  { keyword: 'cursor', name: 'Cursor', url: 'https://cursor.sh', category: 'code' },
+  { keyword: 'suno', name: 'Suno AI', url: 'https://suno.ai', category: 'music' },
+  { keyword: 'elevenlabs', name: 'ElevenLabs', url: 'https://elevenlabs.io', category: 'voice' },
+  // Заблокированные — при упоминании показываем российский аналог
+  { keyword: 'chatgpt', name: 'GigaChat (аналог ChatGPT)', url: 'https://developers.sber.ru/gigachat', category: 'llm' },
+  { keyword: 'chat gpt', name: 'GigaChat (аналог ChatGPT)', url: 'https://developers.sber.ru/gigachat', category: 'llm' },
+  { keyword: 'claude', name: 'GigaChat (аналог Claude)', url: 'https://developers.sber.ru/gigachat', category: 'llm' },
+  { keyword: 'gemini', name: 'YandexGPT (аналог Gemini)', url: 'https://ya.ru/ai', category: 'llm' },
+  { keyword: 'dall-e', name: 'Кандинский (аналог DALL-E)', url: 'https://fusionbrain.ai', category: 'image' },
+  { keyword: 'midjourney', name: 'Кандинский (аналог Midjourney)', url: 'https://fusionbrain.ai', category: 'image' },
+  { keyword: 'stable diffusion', name: 'Кандинский (аналог SD)', url: 'https://fusionbrain.ai', category: 'image' },
+  { keyword: 'copilot', name: 'GigaCode (аналог Copilot)', url: 'https://developers.sber.ru/gigacode', category: 'code' }
 ];
 
 export class AffiliateManager {
@@ -26,6 +40,13 @@ export class AffiliateManager {
 
   initDefaults() {
     const db = getDb();
+
+    // Обновляем заблокированные ссылки на аналоги
+    for (const [blockedDomain, replacement] of Object.entries(BLOCKED_REPLACEMENTS)) {
+      db.prepare("UPDATE affiliates SET name = ?, url = ? WHERE url LIKE ? AND url NOT LIKE ?")
+        .run(replacement.name, replacement.url, `%${blockedDomain}%`, `%${replacement.url}%`);
+    }
+
     const count = db.prepare('SELECT COUNT(*) as count FROM affiliates').get();
     if (count.count > 0) return;
 

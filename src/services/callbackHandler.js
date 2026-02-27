@@ -3,20 +3,20 @@ import { config } from '../config/config.js';
 import { saveButtonClick, getPostByMessageId, getClicksForPost, getDb } from '../db/database.js';
 
 const NOTIFICATION_TEXTS = {
-  'react:interesting': '🔥 Спасибо! Будем писать больше таких новостей',
-  'react:skip': '👌 Учтём!',
-  'react:agree': '👍 Мнение учтено!',
-  'react:disagree': '🤔 Интересно! Расскажите в комментах, почему не согласны',
-  'react:more': '🔎 Подготовим подробный разбор!',
-  'react:useful': '✅ Рады, что полезно!',
-  'react:known': '💪 Значит вы уже в теме!',
-  'react:will_happen': '🎯 Запомним ваш прогноз!',
-  'react:wont_happen': '❌ Посмотрим через время!',
-  'react:interested': '👀 Спасибо за интерес!',
-  'react:not_relevant': '👌 Учтём!',
-  'vote:top1': '1️⃣ Голос за первую новость!',
-  'vote:top2': '2️⃣ Голос за вторую новость!',
-  'vote:top3': '3️⃣ Голос за третью новость!'
+  'react:interesting': '🔥 Голос принят! Будем писать больше таких новостей',
+  'react:skip': '👌 Голос принят! Учтём ваше мнение',
+  'react:agree': '👍 Голос принят! Мнение учтено',
+  'react:disagree': '🤔 Голос принят! Интересная позиция',
+  'react:more': '🔎 Голос принят! Подготовим подробный разбор',
+  'react:useful': '✅ Голос принят! Рады, что полезно',
+  'react:known': '💪 Голос принят! Значит вы уже в теме',
+  'react:will_happen': '🎯 Голос принят! Запомним ваш прогноз',
+  'react:wont_happen': '❌ Голос принят! Посмотрим через время',
+  'react:interested': '👀 Голос принят! Спасибо за интерес',
+  'react:not_relevant': '👌 Голос принят! Учтём',
+  'vote:top1': '1️⃣ Голос принят! Спасибо за участие',
+  'vote:top2': '2️⃣ Голос принят! Спасибо за участие',
+  'vote:top3': '3️⃣ Голос принят! Спасибо за участие'
 };
 
 export class CallbackHandler {
@@ -153,7 +153,7 @@ export class CallbackHandler {
 
   async answerCallback(callbackId, notification) {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${this.apiUrl}/answers`,
         { notification },
         {
@@ -165,8 +165,9 @@ export class CallbackHandler {
           timeout: 10000
         }
       );
+      console.log(`   ↳ Ответ отправлен: "${notification}" (${response.status})`);
     } catch (error) {
-      console.warn('⚠️ Ошибка ответа на callback:', error.response?.data || error.message);
+      console.warn('⚠️ Ошибка ответа на callback:', error.response?.status, error.response?.data || error.message);
     }
   }
 

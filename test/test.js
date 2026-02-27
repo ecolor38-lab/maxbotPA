@@ -586,16 +586,16 @@ describe('Affiliate Manager', () => {
     assert.ok(keywords.includes('copilot'), 'should include copilot');
   });
 
-  it('findMentionedTools() finds ChatGPT in text', () => {
+  it('findMentionedTools() finds ChatGPT mention and maps to RU analog', () => {
     const tools = affiliateManager.findMentionedTools('ChatGPT released a new update');
     assert.ok(tools.length >= 1, 'should find at least one tool');
-    assert.ok(tools.some(t => t.name === 'ChatGPT'), 'should find ChatGPT');
+    assert.ok(tools.some(t => t.url.includes('sber.ru') || t.url.includes('ya.ru')), 'should map to Russian analog');
   });
 
-  it('findMentionedTools() finds Claude in text', () => {
+  it('findMentionedTools() finds Claude mention and maps to RU analog', () => {
     const tools = affiliateManager.findMentionedTools('Try using Claude for your tasks');
     assert.ok(tools.length >= 1, 'should find at least one tool');
-    assert.ok(tools.some(t => t.name === 'Claude'), 'should find Claude');
+    assert.ok(tools.some(t => t.url.includes('sber.ru') || t.url.includes('ya.ru')), 'should map to Russian analog');
   });
 
   it('findMentionedTools() finds multiple tools', () => {
