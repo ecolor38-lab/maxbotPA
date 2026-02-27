@@ -46,6 +46,7 @@ export class MaxPublisher {
     this.botToken = config.max?.botToken;
     this.chatId = config.max?.chatId;
     this.chatLink = config.max?.chatLink || null;
+    this.botLink = config.max?.botLink || null;
     this.publicUrl = process.env.PUBLIC_URL || null;
     this.apiUrl = 'https://platform-api.max.ru';
     this.headers = {
@@ -66,6 +67,10 @@ export class MaxPublisher {
       }
     } catch {
       // affiliate not critical
+    }
+
+    if (this.botLink) {
+      rows.push([{ type: 'link', text: '🤖 Спросить AI-ассистента', url: this.botLink }]);
     }
 
     if (this.chatLink && this.publicUrl) {

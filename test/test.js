@@ -664,6 +664,334 @@ describe('Affiliate Manager', () => {
   });
 });
 
+// ==================== Bot Users / Chat Messages / Payments (AI Chat) ====================
+
+describe('AI Chat Database tables', () => {
+
+  it('bot_users table: insert and retrieve user', () => {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO bot_users (user_id, username, first_name, last_message_date)
+      VALUES ('u1', 'testuser', 'Test', date('now'))
+    `).run();
+
+    const user = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get('u1');
+    assert.ok(user, 'should find the inserted user');
+    assert.equal(user.user_id, 'u1');
+    assert.equal(user.username, 'testuser');
+    assert.equal(user.model, 'gpt-4o-mini', 'default model should be gpt-4o-mini');
+    assert.equal(user.messages_today, 0);
+    assert.equal(user.is_subscribed, 0);
+    assert.equal(user.is_premium, 0);
+    assert.equal(user.total_messages, 0);
+  });
+
+  it('bot_users table: update model and counters', () => {
+    const db = getDb();
+    db.prepare(`
+      UPDATE bot_users SET model = 'claude-haiku-4-5-20251001', messages_today = 5, total_messages = 42
+      WHERE user_id = 'u1'
+    `).run();
+
+    const user = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get('u1');
+    assert.equal(user.model, 'claude-haiku-4-5-20251001');
+    assert.equal(user.messages_today, 5);
+    assert.equal(user.total_messages, 42);
+  });
+
+  it('bot_users table: premium fields', () => {
+    const db = getDb();
+    const until = new Date(Date.now() + 30 * 86400000).toISOString();
+    db.prepare('UPDATE bot_users SET is_premium = 1, premium_until = ? WHERE user_id = ?')
+      .run(until, 'u1');
+
+    const user = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get('u1');
+    assert.equal(user.is_premium, 1);
+    assert.ok(user.premium_until, 'premium_until should be set');
+  });
+
+  it('chat_messages table: insert and retrieve messages', () => {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO chat_messages (user_id, role, content, model) VALUES ('u1', 'user', 'Hello AI', NULL)
+    `).run();
+    db.prepare(`
+      INSERT INTO chat_messages (user_id, role, content, model) VALUES ('u1', 'assistant', 'Hello!', 'gpt-4o-mini')
+    `).run();
+
+    const msgs = db.prepare('SELECT * FROM chat_messages WHERE user_id = ? ORDER BY id').all('u1');
+    assert.equal(msgs.length, 2, 'should have 2 messages');
+    assert.equal(msgs[0].role, 'user');
+    assert.equal(msgs[0].content, 'Hello AI');
+    assert.equal(msgs[1].role, 'assistant');
+    assert.equal(msgs[1].content, 'Hello!');
+    assert.equal(msgs[1].model, 'gpt-4o-mini');
+  });
+
+  it('chat_messages table: context query returns in order', () => {
+    const db = getDb();
+    // Insert more messages
+    for (let i = 0; i < 5; i++) {
+      db.prepare(`INSERT INTO chat_messages (user_id, role, content) VALUES ('u1', 'user', ?)`)
+        .run(`msg ${i}`);
+    }
+
+    // Get last 3 (like context loading)
+    const context = db.prepare(`
+      SELECT role, content FROM chat_messages WHERE user_id = ? ORDER BY created_at DESC LIMIT 3
+    `).all('u1');
+    assert.equal(context.length, 3, 'should return 3 messages');
+  });
+
+  it('payments table: insert and retrieve payment', () => {
+    const db = getDb();
+    db.prepare(`
+      INSERT INTO payments (user_id, payment_id, amount, status) VALUES ('u1', 'pay_123', 39000, 'pending')
+    `).run();
+
+    const payment = db.prepare('SELECT * FROM payments WHERE payment_id = ?').get('pay_123');
+    assert.ok(payment, 'should find the payment');
+    assert.equal(payment.user_id, 'u1');
+    assert.equal(payment.amount, 39000);
+    assert.equal(payment.status, 'pending');
+  });
+
+  it('payments table: update status to succeeded', () => {
+    const db = getDb();
+    db.prepare(`
+      UPDATE payments SET status = 'succeeded', confirmed_at = datetime('now') WHERE payment_id = 'pay_123'
+    `).run();
+
+    const payment = db.prepare('SELECT * FROM payments WHERE payment_id = ?').get('pay_123');
+    assert.equal(payment.status, 'succeeded');
+    assert.ok(payment.confirmed_at, 'confirmed_at should be set');
+  });
+
+  it('payments table: unique payment_id constraint', () => {
+    const db = getDb();
+    assert.throws(() => {
+      db.prepare(`
+        INSERT INTO payments (user_id, payment_id, amount, status) VALUES ('u1', 'pay_123', 39000, 'pending')
+      `).run();
+    }, 'duplicate payment_id should throw');
+  });
+
+  it('chat_messages index on user_id works', () => {
+    const db = getDb();
+    const msgs = db.prepare('SELECT * FROM chat_messages WHERE user_id = ?').all('u1');
+    assert.ok(msgs.length > 0, 'index should allow fast query by user_id');
+  });
+
+  it('payments index on user_id works', () => {
+    const db = getDb();
+    const payments = db.prepare('SELECT * FROM payments WHERE user_id = ?').all('u1');
+    assert.ok(payments.length > 0, 'index should allow fast query by user_id');
+  });
+});
+
+// ==================== ChatBot unit tests ====================
+
+describe('ChatBot', () => {
+  let ChatBotClass;
+
+  before(async () => {
+    const mod = await import('../src/services/chatBot.js');
+    ChatBotClass = mod.ChatBot;
+  });
+
+  it('constructs with config', () => {
+    const bot = new ChatBotClass({
+      max: { botToken: 'test', chatLink: 'https://example.com' },
+      chat: { freeDailyLimit: 5, premiumDailyLimit: 50, contextMessages: 8 }
+    });
+    assert.equal(bot.FREE_DAILY_LIMIT, 5);
+    assert.equal(bot.PREMIUM_DAILY_LIMIT, 50);
+    assert.equal(bot.CONTEXT_MESSAGES, 8);
+  });
+
+  it('getOrCreateUser creates and returns user', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const user = bot.getOrCreateUser('chatbot_u1', 'alice', 'Alice');
+    assert.ok(user, 'should return user object');
+    assert.equal(user.user_id, 'chatbot_u1');
+    assert.equal(user.model, 'gpt-4o-mini');
+  });
+
+  it('getOrCreateUser returns existing user on second call', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const user = bot.getOrCreateUser('chatbot_u1');
+    assert.equal(user.user_id, 'chatbot_u1');
+    assert.equal(user.first_name, 'Alice');
+  });
+
+  it('resetDailyCounterIfNeeded resets counter on new day', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const db = getDb();
+    db.prepare('UPDATE bot_users SET messages_today = 10, last_message_date = ? WHERE user_id = ?')
+      .run('2020-01-01', 'chatbot_u1');
+
+    const user = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get('chatbot_u1');
+    bot.resetDailyCounterIfNeeded(user);
+    assert.equal(user.messages_today, 0, 'should reset to 0');
+  });
+
+  it('saveMessage and getConversationContext', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const uid = 'chatbot_ctx_' + Date.now();
+    bot.saveMessage(uid, 'user', 'Question 1');
+    bot.saveMessage(uid, 'assistant', 'Answer 1', 'gpt-4o-mini');
+    bot.saveMessage(uid, 'user', 'Question 2');
+
+    const context = bot.getConversationContext(uid, 10);
+    assert.equal(context.length, 3, 'should have 3 messages');
+    assert.equal(context[0].role, 'user');
+    assert.equal(context[0].content, 'Question 1');
+    assert.equal(context[2].role, 'user');
+    assert.equal(context[2].content, 'Question 2');
+  });
+
+  it('getConversationContext respects limit', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const uid = 'chatbot_limit_' + Date.now();
+    bot.saveMessage(uid, 'user', 'Q1');
+    bot.saveMessage(uid, 'assistant', 'A1');
+    bot.saveMessage(uid, 'user', 'Q2');
+    const context = bot.getConversationContext(uid, 2);
+    assert.equal(context.length, 2, 'should return only 2 messages');
+  });
+
+  it('getModelLabel returns correct labels', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    assert.equal(bot.getModelLabel('gpt-4o-mini'), 'GPT-4o-mini');
+    assert.equal(bot.getModelLabel('claude-haiku-4-5-20251001'), 'Claude Haiku');
+    assert.equal(bot.getModelLabel(null), 'GPT-4o-mini');
+  });
+
+  it('buildSubscriptionKeyboard returns valid structure', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test', chatLink: 'https://max.ru/test' }, chat: {} });
+    const kb = bot.buildSubscriptionKeyboard();
+    assert.equal(kb.type, 'inline_keyboard');
+    assert.ok(kb.payload.buttons.length >= 2, 'should have at least 2 rows');
+    assert.equal(kb.payload.buttons[0][0].type, 'link');
+    assert.equal(kb.payload.buttons[1][0].type, 'callback');
+    assert.equal(kb.payload.buttons[1][0].payload, 'check:subscription');
+  });
+
+  it('buildModelsKeyboard returns valid structure', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const kb = bot.buildModelsKeyboard();
+    assert.equal(kb.type, 'inline_keyboard');
+    assert.equal(kb.payload.buttons.length, 2);
+    assert.equal(kb.payload.buttons[0][0].payload, 'model:gpt-4o-mini');
+    assert.equal(kb.payload.buttons[1][0].payload, 'model:claude-haiku');
+  });
+
+  it('buildPremiumKeyboard returns valid structure', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const kb = bot.buildPremiumKeyboard();
+    assert.equal(kb.type, 'inline_keyboard');
+    assert.equal(kb.payload.buttons[0][0].payload, 'premium:buy');
+  });
+
+  it('checkPremiumExpiry deactivates expired premium', () => {
+    const bot = new ChatBotClass({ max: { botToken: 'test' }, chat: {} });
+    const db = getDb();
+    db.prepare(`
+      INSERT OR REPLACE INTO bot_users (user_id, is_premium, premium_until, last_message_date)
+      VALUES ('expire_test', 1, '2020-01-01T00:00:00.000Z', date('now'))
+    `).run();
+
+    const user = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get('expire_test');
+    bot.checkPremiumExpiry(user);
+    assert.equal(user.is_premium, 0, 'should deactivate expired premium');
+
+    const dbUser = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get('expire_test');
+    assert.equal(dbUser.is_premium, 0, 'DB should reflect deactivated premium');
+  });
+});
+
+// ==================== PaymentManager unit tests ====================
+
+describe('PaymentManager', () => {
+  let PaymentManagerClass;
+
+  before(async () => {
+    const mod = await import('../src/services/paymentManager.js');
+    PaymentManagerClass = mod.PaymentManager;
+  });
+
+  it('constructs with config', () => {
+    const pm = new PaymentManagerClass({
+      yookassa: { shopId: 'shop1', secretKey: 'secret1' },
+      max: { botToken: 'test' }
+    });
+    assert.equal(pm.PREMIUM_PRICE, 390);
+    assert.equal(pm.PREMIUM_DAYS, 30);
+    assert.equal(pm.configured, true);
+  });
+
+  it('configured is false without credentials', () => {
+    const pm = new PaymentManagerClass({ yookassa: {}, max: {} });
+    assert.equal(pm.configured, false);
+  });
+
+  it('isYookassaIP matches known IPs', () => {
+    const pm = new PaymentManagerClass({ yookassa: {}, max: {} });
+    assert.equal(pm.isYookassaIP('185.71.76.1'), true);
+    assert.equal(pm.isYookassaIP('185.71.77.10'), true);
+    assert.equal(pm.isYookassaIP('77.75.153.5'), true);
+    assert.equal(pm.isYookassaIP('77.75.156.11'), true);
+    assert.equal(pm.isYookassaIP('77.75.156.35'), true);
+  });
+
+  it('isYookassaIP rejects unknown IPs', () => {
+    const pm = new PaymentManagerClass({ yookassa: {}, max: {} });
+    assert.equal(pm.isYookassaIP('1.2.3.4'), false);
+    assert.equal(pm.isYookassaIP('192.168.1.1'), false);
+    assert.equal(pm.isYookassaIP(null), false);
+    assert.equal(pm.isYookassaIP(''), false);
+  });
+
+  it('handleWebhook ignores non-succeeded events', async () => {
+    const pm = new PaymentManagerClass({ yookassa: {}, max: {} });
+    // Should not throw
+    await pm.handleWebhook({ event: 'payment.canceled', object: {} });
+    await pm.handleWebhook(null);
+    await pm.handleWebhook({});
+  });
+
+  it('handleWebhook processes succeeded payment', async () => {
+    const pm = new PaymentManagerClass({ yookassa: {}, max: {} });
+    const db = getDb();
+
+    // Create user and payment
+    db.prepare(`
+      INSERT OR REPLACE INTO bot_users (user_id, is_premium, last_message_date)
+      VALUES ('pay_user', 0, date('now'))
+    `).run();
+    db.prepare(`
+      INSERT INTO payments (user_id, payment_id, amount, status)
+      VALUES ('pay_user', 'pay_webhook_1', 39000, 'pending')
+    `).run();
+
+    await pm.handleWebhook({
+      event: 'payment.succeeded',
+      object: {
+        id: 'pay_webhook_1',
+        metadata: { user_id: 'pay_user' }
+      }
+    });
+
+    const payment = db.prepare('SELECT * FROM payments WHERE payment_id = ?').get('pay_webhook_1');
+    assert.equal(payment.status, 'succeeded');
+    assert.ok(payment.confirmed_at);
+
+    const user = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get('pay_user');
+    assert.equal(user.is_premium, 1, 'user should be premium after payment');
+    assert.ok(user.premium_until, 'premium_until should be set');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------

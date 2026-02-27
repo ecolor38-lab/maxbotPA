@@ -14,7 +14,8 @@ export const config = {
   max: {
     botToken: process.env.MAX_BOT_TOKEN,
     chatId: process.env.MAX_CHAT_ID ? parseInt(process.env.MAX_CHAT_ID) : null,
-    chatLink: process.env.MAX_CHAT_LINK || null
+    chatLink: process.env.MAX_CHAT_LINK || null,
+    botLink: process.env.MAX_BOT_LINK || null
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,
@@ -26,6 +27,16 @@ export const config = {
   },
   search: {
     daysBack: parseInt(process.env.SEARCH_DAYS_BACK) || 2
+  },
+  yookassa: {
+    shopId: process.env.YOOKASSA_SHOP_ID || null,
+    secretKey: process.env.YOOKASSA_SECRET_KEY || null,
+    returnUrl: process.env.YOOKASSA_RETURN_URL || 'http://141.98.235.39:3000/payment-success'
+  },
+  chat: {
+    freeDailyLimit: parseInt(process.env.CHAT_FREE_DAILY_LIMIT) || 10,
+    premiumDailyLimit: parseInt(process.env.CHAT_PREMIUM_DAILY_LIMIT) || 100,
+    contextMessages: parseInt(process.env.CHAT_CONTEXT_MESSAGES) || 10
   },
   language: process.env.LANGUAGE || 'ru'
 };

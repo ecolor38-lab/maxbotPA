@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { config } from '../config/config.js';
 import { saveButtonClick, getPostByMessageId, getClicksForPost, getDb } from '../db/database.js';
+import { ChatBot } from './chatBot.js';
+import { PaymentManager } from './paymentManager.js';
 
 const NOTIFICATION_TEXTS = {
   'react:interesting': '🔥 Голос принят! Будем писать больше таких новостей',
@@ -26,6 +28,8 @@ export class CallbackHandler {
     this.chatLink = config.max?.chatLink || null;
     this.running = false;
     this.marker = this.loadMarker();
+    this.chatBot = new ChatBot(config);
+    this.paymentManager = new PaymentManager(config);
   }
 
   loadMarker() {
@@ -75,7 +79,7 @@ export class CallbackHandler {
 
   async poll() {
     const params = {
-      types: 'message_callback',
+      types: 'message_created,message_callback,bot_started',
       timeout: 30,
       limit: 50
     };
@@ -97,10 +101,60 @@ export class CallbackHandler {
 
     if (updates && updates.length > 0) {
       for (const update of updates) {
-        if (update.update_type === 'message_callback') {
-          await this.handleCallback(update);
+        if (update.update_type === 'message_created') {
+          await this.chatBot.handleMessage(update);
+        } else if (update.update_type === 'bot_started') {
+          await this.chatBot.handleBotStarted(update);
+        } else if (update.update_type === 'message_callback') {
+          const payload = update.callback?.payload || '';
+          if (payload.startsWith('check:') || payload.startsWith('model:') || payload.startsWith('premium:')) {
+            // DM chatbot callbacks
+            if (payload === 'premium:buy') {
+              await this.handlePremiumBuy(update);
+            } else {
+              await this.chatBot.handleCallbackFromDM(update);
+            }
+          } else {
+            await this.handleCallback(update);
+          }
         }
       }
+    }
+  }
+
+  async handlePremiumBuy(update) {
+    const { callback } = update;
+    if (!callback) return;
+
+    const callbackId = callback.callback_id;
+    const userId = callback.user?.user_id ? String(callback.user.user_id) : null;
+    if (!userId) return;
+
+    if (!this.paymentManager.configured) {
+      await this.chatBot.answerCallback(callbackId, '⚠️ Платежи временно недоступны');
+      return;
+    }
+
+    await this.chatBot.answerCallback(callbackId, '💎 Создаём ссылку на оплату...');
+
+    try {
+      const paymentUrl = await this.paymentManager.createPayment(userId);
+      if (paymentUrl) {
+        const keyboard = {
+          type: 'inline_keyboard',
+          payload: {
+            buttons: [
+              [{ type: 'link', text: '💳 Оплатить 390₽', url: paymentUrl }]
+            ]
+          }
+        };
+        await this.chatBot.sendMessage(userId, '💎 Ссылка на оплату Premium (1 месяц):', keyboard);
+      } else {
+        await this.chatBot.sendMessage(userId, '⚠️ Не удалось создать платёж. Попробуйте позже.');
+      }
+    } catch (error) {
+      console.error('❌ Premium buy error:', error.message);
+      await this.chatBot.sendMessage(userId, '⚠️ Ошибка при создании платежа. Попробуйте позже.');
     }
   }
 

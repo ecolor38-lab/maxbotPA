@@ -153,6 +153,45 @@ function initTables(db) {
     CREATE INDEX IF NOT EXISTS idx_channel_metrics_recorded_at ON channel_metrics(recorded_at);
     CREATE INDEX IF NOT EXISTS idx_trends_detected_at ON detected_trends(detected_at);
     CREATE INDEX IF NOT EXISTS idx_trends_status ON detected_trends(status);
+
+    -- AI Chat Bot tables
+    CREATE TABLE IF NOT EXISTS bot_users (
+      user_id TEXT PRIMARY KEY,
+      username TEXT,
+      first_name TEXT,
+      model TEXT NOT NULL DEFAULT 'gpt-4o-mini',
+      messages_today INTEGER NOT NULL DEFAULT 0,
+      last_message_date TEXT,
+      is_subscribed INTEGER NOT NULL DEFAULT 0,
+      is_premium INTEGER NOT NULL DEFAULT 0,
+      premium_until TEXT,
+      total_messages INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      model TEXT,
+      tokens_used INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      payment_id TEXT UNIQUE,
+      amount INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      confirmed_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at);
+    CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
   `);
 }
 

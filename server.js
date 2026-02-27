@@ -14,6 +14,7 @@ import {
   getAnalyticsGrowth
 } from './src/services/analyticsService.js';
 import { AdManager } from './src/services/adManager.js';
+import { PaymentManager } from './src/services/paymentManager.js';
 
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err.message);
@@ -89,7 +90,8 @@ app.get('/', (req, res) => {
       '/api/ads/pricing',
       '/api/ads/campaigns',
       '/api/ads/slots',
-      '/api/ads/stats'
+      '/api/ads/stats',
+      '/api/payments/webhook'
     ]
   });
 });
@@ -156,6 +158,7 @@ app.get('/api/analytics/growth', (req, res) => {
 });
 
 const adManager = new AdManager();
+const paymentManager = new PaymentManager(config);
 
 app.get('/api/ads/pricing', (req, res) => {
   try {
@@ -210,6 +213,33 @@ app.get('/api/ads/stats', requireAuth, (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// YooKassa webhook
+app.post('/api/payments/webhook', async (req, res) => {
+  // Extract real client IP (last entry in x-forwarded-for or direct socket)
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = forwarded ? forwarded.split(',').pop().trim() : (req.socket.remoteAddress || '');
+  if (!paymentManager.isYookassaIP(ip)) {
+    console.warn(`⚠️ Payment webhook REJECTED from unknown IP: ${ip}`);
+    return res.sendStatus(403);
+  }
+
+  try {
+    await paymentManager.handleWebhook(req.body);
+  } catch (error) {
+    console.error('❌ Payment webhook error:', error.message);
+  }
+  res.sendStatus(200);
+});
+
+// Payment success page
+app.get('/payment-success', (req, res) => {
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Оплата</title>
+<style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f0f0f0}
+.card{background:#fff;padding:40px;border-radius:12px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+h1{color:#4CAF50}</style></head>
+<body><div class="card"><h1>Оплата прошла успешно!</h1><p>Premium-доступ активирован. Вернитесь в MAX.</p></div></body></html>`);
 });
 
 app.use((err, req, res, _next) => {
