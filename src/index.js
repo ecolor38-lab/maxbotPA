@@ -73,7 +73,7 @@ export class AIBusinessBot {
     if (!text) throw new Error('Не удалось сгенерировать текст');
 
     const hashtags = this.hashtagGenerator.generateHashtags(text);
-    const imageUrl = await this.imageGenerator.generateImage(text);
+    const imageUrl = await this.imageGenerator.generateImage(text, postType);
 
     if (verbose) {
       console.log('\n📝 Пост:\n' + '─'.repeat(50));
