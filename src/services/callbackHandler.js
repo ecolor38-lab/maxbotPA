@@ -23,6 +23,7 @@ export class CallbackHandler {
   constructor() {
     this.apiUrl = 'https://platform-api.max.ru';
     this.botToken = config.max?.botToken;
+    this.chatLink = config.max?.chatLink || null;
     this.running = false;
     this.marker = this.loadMarker();
   }
@@ -115,6 +116,13 @@ export class CallbackHandler {
 
     console.log(`🔘 Клик: ${payload} от ${userName} (msg: ${messageId})`);
 
+    // Кнопка "Поделиться каналом"
+    if (payload === 'share:channel') {
+      const link = this.chatLink || 'https://max.ru';
+      await this.answerCallback(callbackId, `📢 Перешлите друзьям: ${link}`);
+      return;
+    }
+
     const post = messageId ? getPostByMessageId(String(messageId)) : null;
     const postId = post?.id || null;
 
@@ -136,7 +144,67 @@ export class CallbackHandler {
     }
 
     const notification = NOTIFICATION_TEXTS[payload] || '👍 Спасибо!';
-    await this.answerCallback(callbackId, notification);
+
+    // Обновляем клавиатуру со счётчиками голосов
+    const updatedMessage = postId ? this.buildUpdatedMessage(message, postId) : null;
+    await this.answerCallback(callbackId, notification, updatedMessage);
+  }
+
+  buildUpdatedMessage(originalMessage, postId) {
+    try {
+      const body = originalMessage?.body;
+      if (!body) return null;
+
+      const clicks = getClicksForPost(postId);
+      if (!clicks.length) return null;
+
+      const clickMap = {};
+      for (const c of clicks) {
+        clickMap[c.button_key] = c.count;
+      }
+
+      const originalAttachments = body.attachments || [];
+      const newAttachments = [];
+
+      for (const att of originalAttachments) {
+        if (att.type === 'inline_keyboard') {
+          newAttachments.push(this.updateKeyboardWithCounts(att, clickMap));
+        } else if (att.type === 'image') {
+          // Сохраняем картинку по токену
+          const token = att.payload?.token;
+          if (token) {
+            newAttachments.push({ type: 'image', payload: { token } });
+          }
+        }
+      }
+
+      if (!newAttachments.length) return null;
+
+      return {
+        text: body.text || '',
+        attachments: newAttachments,
+        format: body.format || 'markdown'
+      };
+    } catch (e) {
+      console.warn('⚠️ Не удалось построить обновлённое сообщение:', e.message);
+      return null;
+    }
+  }
+
+  updateKeyboardWithCounts(keyboard, clickMap) {
+    const updated = JSON.parse(JSON.stringify(keyboard));
+
+    for (const row of updated.payload.buttons) {
+      for (const btn of row) {
+        if (btn.type === 'callback' && btn.payload && clickMap[btn.payload]) {
+          // "🔥 Интересно (3)" → "🔥 Интересно", затем добавляем новый счётчик
+          const baseText = btn.text.replace(/\s*\(\d+\)$/, '');
+          btn.text = `${baseText} (${clickMap[btn.payload]})`;
+        }
+      }
+    }
+
+    return updated;
   }
 
   checkVoteThreshold(postId, payload) {
@@ -151,11 +219,16 @@ export class CallbackHandler {
     }
   }
 
-  async answerCallback(callbackId, notification) {
+  async answerCallback(callbackId, notification, updatedMessage = null) {
     try {
+      const body = { notification };
+      if (updatedMessage) {
+        body.message = updatedMessage;
+      }
+
       const response = await axios.post(
         `${this.apiUrl}/answers`,
-        { notification },
+        body,
         {
           params: { callback_id: callbackId },
           headers: {

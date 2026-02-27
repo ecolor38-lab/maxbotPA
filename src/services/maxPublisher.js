@@ -68,7 +68,7 @@ export class MaxPublisher {
     }
 
     if (this.chatLink) {
-      rows.push([{ type: 'link', text: '📢 Поделиться каналом', url: this.chatLink }]);
+      rows.push([{ type: 'callback', text: '📢 Поделиться каналом', payload: 'share:channel' }]);
     }
 
     return {
