@@ -64,6 +64,10 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+app.get('/share', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'share.html'));
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });

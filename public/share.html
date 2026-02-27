@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нейро.Новости — Подписывайся!</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #fff;
+  }
+  .card {
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 24px;
+    padding: 40px 32px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+  }
+  .logo { font-size: 56px; margin-bottom: 16px; }
+  h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .subtitle {
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+  .link-box {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 15px;
+    word-break: break-all;
+    margin-bottom: 20px;
+    color: #a8b4ff;
+    user-select: all;
+    cursor: text;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 12px;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+  }
+  .btn-share {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    color: #fff;
+  }
+  .btn-open {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+  .btn:disabled { opacity: 0.5; cursor: default; }
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #38ef7d;
+    color: #0f0c29;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .hide { display: none; }
+  .stats { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 16px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">🤖</div>
+  <h1 id="channelName">Нейро.Новости</h1>
+  <p class="subtitle">ИИ-новости каждый день: тренды, аналитика, полезные инструменты. Подпишись и будь в курсе!</p>
+
+  <div class="link-box" id="linkBox"></div>
+
+  <button class="btn btn-primary" onclick="copyLink()">
+    📋 Скопировать ссылку
+  </button>
+
+  <button class="btn btn-share" id="shareBtn" onclick="nativeShare()">
+    📤 Поделиться с друзьями
+  </button>
+
+  <a id="openLink" class="btn btn-open" href="#" target="_blank">
+    ➡️ Открыть канал
+  </a>
+
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="toast" id="toast">Ссылка скопирована!</div>
+
+<script>
+  const link = document.getElementById('linkBox').textContent =
+    new URLSearchParams(location.search).get('link') || location.origin + '/share';
+  document.getElementById('openLink').href = link;
+
+  if (!navigator.share) {
+    document.getElementById('shareBtn').classList.add('hide');
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(link).then(() => showToast()).catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = link;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast();
+    });
+  }
+
+  function nativeShare() {
+    navigator.share({
+      title: 'Нейро.Новости',
+      text: 'ИИ-новости каждый день — подпишись!',
+      url: link
+    }).catch(() => {});
+  }
+
+  function showToast() {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+</script>
+
+</body>
+</html>

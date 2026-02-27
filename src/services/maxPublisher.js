@@ -46,6 +46,7 @@ export class MaxPublisher {
     this.botToken = config.max?.botToken;
     this.chatId = config.max?.chatId;
     this.chatLink = config.max?.chatLink || null;
+    this.publicUrl = process.env.PUBLIC_URL || null;
     this.apiUrl = 'https://platform-api.max.ru';
     this.headers = {
       Authorization: this.botToken,
@@ -67,8 +68,9 @@ export class MaxPublisher {
       // affiliate not critical
     }
 
-    if (this.chatLink) {
-      rows.push([{ type: 'callback', text: '📢 Поделиться каналом', payload: 'share:channel' }]);
+    if (this.chatLink && this.publicUrl) {
+      const shareUrl = `${this.publicUrl}/share?link=${encodeURIComponent(this.chatLink)}`;
+      rows.push([{ type: 'link', text: '📢 Поделиться каналом', url: shareUrl }]);
     }
 
     return {
