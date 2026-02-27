@@ -316,7 +316,7 @@ export class ChatBot {
 
     try {
       const response = await axios.get(`${this.apiUrl}/chats/${this.channelChatId}/members`, {
-        params: { user_ids: [parseInt(userId)] },
+        params: { user_ids: userId },
         headers: { Authorization: this.botToken },
         timeout: 10000
       });
@@ -366,7 +366,7 @@ export class ChatBot {
 
   async answerCallback(callbackId, notification) {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${this.apiUrl}/answers`,
         { notification },
         {
@@ -378,8 +378,9 @@ export class ChatBot {
           timeout: 10000
         }
       );
+      console.log(`   ↳ DM callback ответ: "${notification}" (${response.status})`);
     } catch (error) {
-      console.warn('⚠️ Answer callback error:', error.message);
+      console.warn('⚠️ Answer callback error:', error.response?.status, error.response?.data || error.message);
     }
   }
 
