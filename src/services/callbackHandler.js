@@ -101,14 +101,17 @@ export class CallbackHandler {
 
     if (updates && updates.length > 0) {
       for (const update of updates) {
-        if (update.update_type === 'message_created') {
+        const type = update.update_type;
+        if (type === 'message_created') {
+          console.log(`💬 DM message from ${update.message?.sender?.name || 'unknown'}`);
           await this.chatBot.handleMessage(update);
-        } else if (update.update_type === 'bot_started') {
+        } else if (type === 'bot_started') {
+          console.log(`🚀 bot_started from user ${update.user?.user_id || 'unknown'}`);
           await this.chatBot.handleBotStarted(update);
-        } else if (update.update_type === 'message_callback') {
+        } else if (type === 'message_callback') {
           const payload = update.callback?.payload || '';
+          console.log(`🔘 Callback: "${payload}" from ${update.callback?.user?.name || 'unknown'}`);
           if (payload.startsWith('check:') || payload.startsWith('model:') || payload.startsWith('premium:')) {
-            // DM chatbot callbacks
             if (payload === 'premium:buy') {
               await this.handlePremiumBuy(update);
             } else {
@@ -117,6 +120,8 @@ export class CallbackHandler {
           } else {
             await this.handleCallback(update);
           }
+        } else {
+          console.log(`❓ Unknown update type: ${type}`);
         }
       }
     }

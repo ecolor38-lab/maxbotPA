@@ -58,9 +58,24 @@ export class ChatBot {
       const username = msg.sender?.username || null;
       const firstName = msg.sender?.first_name || msg.sender?.name || null;
 
+      const isNew = !this.userExists(userId);
       const user = this.getOrCreateUser(userId, username, firstName);
       this.resetDailyCounterIfNeeded(user);
       this.checkPremiumExpiry(user);
+
+      // Auto-welcome for new users (first message = greeting)
+      if (isNew) {
+        const welcome = `👋 Привет! Я AI-ассистент канала *Нейро.Новости*.
+
+Могу ответить на любой вопрос об искусственном интеллекте, технологиях, программировании и многом другом.
+
+📊 Бесплатно: ${this.FREE_DAILY_LIMIT} сообщений/день
+💎 Premium: ${this.PREMIUM_DAILY_LIMIT} сообщений/день
+
+Для начала подпишитесь на канал:`;
+        await this.sendMessage(userId, welcome, this.buildSubscriptionKeyboard());
+        return;
+      }
 
       // Handle commands
       if (text.startsWith('/')) {
@@ -159,7 +174,9 @@ export class ChatBot {
   }
 
   async handleSubscriptionCheck(callbackId, userId) {
+    console.log(`🔍 Checking subscription for user ${userId}, channel ${this.channelChatId}`);
     const subscribed = await this.checkSubscriptionViaAPI(userId);
+    console.log(`🔍 Subscription result: ${subscribed}`);
     if (subscribed) {
       const db = getDb();
       db.prepare('UPDATE bot_users SET is_subscribed = 1 WHERE user_id = ?').run(userId);
@@ -403,6 +420,11 @@ export class ChatBot {
   }
 
   // --- DB helpers ---
+  userExists(userId) {
+    const db = getDb();
+    return !!db.prepare('SELECT 1 FROM bot_users WHERE user_id = ?').get(userId);
+  }
+
   getOrCreateUser(userId, username, firstName) {
     const db = getDb();
     let user = db.prepare('SELECT * FROM bot_users WHERE user_id = ?').get(userId);
