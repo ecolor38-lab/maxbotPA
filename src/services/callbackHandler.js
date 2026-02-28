@@ -178,7 +178,22 @@ export class CallbackHandler {
     // Кнопка "Поделиться каналом"
     if (payload === 'share:channel') {
       const link = this.chatLink || 'https://max.ru';
-      await this.answerCallback(callbackId, `📢 Перешлите друзьям: ${link}`);
+      await this.answerCallback(callbackId, '📢 Ссылка отправлена в личку!');
+      // Отправляем ссылку в личку пользователю (уведомление слишком мелькает)
+      if (userId) {
+        const shareUrl = process.env.PUBLIC_URL
+          ? `${process.env.PUBLIC_URL}/share?link=${encodeURIComponent(link)}`
+          : link;
+        const keyboard = {
+          type: 'inline_keyboard',
+          payload: {
+            buttons: [
+              [{ type: 'link', text: '📢 Поделиться каналом', url: shareUrl }]
+            ]
+          }
+        };
+        await this.chatBot.sendMessage(userId, '📢 Поделитесь каналом с друзьями:', keyboard);
+      }
       return;
     }
 

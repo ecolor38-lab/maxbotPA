@@ -134,7 +134,7 @@ export class BotScheduler {
     const post = pending[0];
     console.log(`📤 Публикую пост #${post.id} [${postType}]...\n`);
 
-    const result = await this.bot.generateAndPublish(post.articles, postType);
+    const result = await this.bot.generateAndPublish(post.articles, postType, { skipFilter: true });
     await this.planner.markAsPublished(post.id, result);
 
     console.log('✅ Опубликовано');

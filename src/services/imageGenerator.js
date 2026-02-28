@@ -111,34 +111,40 @@ export class ImageGenerator {
       return null;
     }
 
-    console.log('🎨 Генерация обложки через DALL-E...');
+    const prompt = this.buildPrompt(postText, postType);
+    const MAX_RETRIES = 3;
 
-    try {
-      const prompt = this.buildPrompt(postText, postType);
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      console.log(`🎨 Генерация обложки через DALL-E... (попытка ${attempt}/${MAX_RETRIES})`);
 
-      const response = await this.openai.images.generate({
-        model: 'dall-e-3',
-        prompt,
-        n: 1,
-        size: '1792x1024',
-        quality: 'hd'
-      });
+      try {
+        const response = await this.openai.images.generate({
+          model: 'dall-e-3',
+          prompt,
+          n: 1,
+          size: '1792x1024',
+          quality: 'hd'
+        });
 
-      const imageUrl = response.data[0]?.url;
-      if (imageUrl) {
-        console.log('✅ Обложка сгенерирована');
-        return imageUrl;
+        const imageUrl = response.data[0]?.url;
+        if (imageUrl) {
+          console.log('✅ Обложка сгенерирована');
+          return imageUrl;
+        }
+      } catch (error) {
+        console.log(`⚠️ Ошибка генерации картинки (попытка ${attempt}):`, error.message);
+        if (attempt < MAX_RETRIES) {
+          const delay = attempt * 5000;
+          console.log(`   ⏳ Повтор через ${delay / 1000} сек...`);
+          await new Promise((r) => setTimeout(r, delay));
+        }
       }
-    } catch (error) {
-      console.log('⚠️ Ошибка генерации картинки:', error.message);
     }
 
     return null;
   }
 
   buildPrompt(postText, postType = 'news_flash') {
-    const firstLine = postText.split('\n')[0].replace(/[#*_\[\]()🔥⚡💡📰🚀🤖💸📱🧠🔮📌🏆]/g, '').trim();
-    const context = firstLine.substring(0, 120);
     const lower = postText.toLowerCase();
 
     const theme = this.detectTheme(lower);
@@ -146,7 +152,8 @@ export class ImageGenerator {
 
     console.log(`   Стиль: ${style.name} | Тема: ${theme.substring(0, 50)}...`);
 
-    return `Create a striking image for a technology news article. Subject: "${context}". Scene: ${theme}. Art direction: ${style.prompt}. The image must be visually arresting, with a clear focal point and professional composition. Aspect ratio 16:9. STRICT: absolutely NO text, NO letters, NO words, NO numbers, NO logos, NO watermarks anywhere in the image. No photorealistic human faces.`;
+    // Use only abstract theme — no post text to avoid content policy blocks on names/politics
+    return `Create a striking image for a technology news channel. Scene: ${theme}. Art direction: ${style.prompt}. The image must be visually arresting, with a clear focal point and professional composition. Aspect ratio 16:9. STRICT: absolutely NO text, NO letters, NO words, NO numbers, NO logos, NO watermarks anywhere in the image. No photorealistic human faces. No real people. Abstract and artistic.`;
   }
 
   detectTheme(text) {

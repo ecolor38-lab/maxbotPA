@@ -39,6 +39,12 @@ const BLOCKED_PATTERNS = [
 
 const MAX_IMAGE_PROMPT_LENGTH = 1000;
 
+const ORDER_KEYWORDS = [
+  'заказать бот', 'создать бот', 'сделать бот', 'хочу бота',
+  'хочу такого', 'нужен бот', 'свой бот', 'такой же бот',
+  'заказ бота', 'order bot', 'свой канал с ботом'
+];
+
 export class ChatBot {
   constructor(config) {
     this.config = config;
@@ -50,6 +56,10 @@ export class ChatBot {
     this.FREE_DAILY_LIMIT = config.chat?.freeDailyLimit || 5;
     this.PREMIUM_DAILY_LIMIT = config.chat?.premiumDailyLimit || 100;
     this.CONTEXT_MESSAGES = config.chat?.contextMessages || 10;
+
+    // Order flow state
+    this.orderState = new Map(); // userId → 'awaiting_description'
+    this.adminUserId = config.max?.adminUserId || null;
 
     // Rate limiting: 1 message per 2 seconds per user
     this.lastMessageTime = new Map();
@@ -128,6 +138,18 @@ export class ChatBot {
         return;
       }
 
+      // Order flow: check if awaiting description (before commands & AI)
+      if (this.orderState.get(userId) === 'awaiting_description') {
+        await this.completeOrder(userId, text, username, firstName);
+        return;
+      }
+
+      // Order intent detection (before security filter — order keywords are safe)
+      if (this.isOrderRequest(text)) {
+        await this.startOrderFlow(userId);
+        return;
+      }
+
       // Security: block dangerous content
       if (this.isBlockedContent(text)) {
         console.warn(`🚫 Blocked content from user ${userId}: "${text.substring(0, 50)}..."`);
@@ -135,7 +157,7 @@ export class ChatBot {
         return;
       }
 
-      // Handle commands
+      // Handle commands (/order handled inside)
       if (text.startsWith('/')) {
         await this.handleCommand(userId, text, user);
         return;
@@ -322,8 +344,12 @@ export class ChatBot {
         break;
       }
 
+      case '/order':
+        await this.startOrderFlow(userId);
+        break;
+
       case '/help':
-        await this.sendMessage(userId, `📋 *Команды:*\n\n/start — начало работы\n/models — выбор модели AI\n/premium — информация о Premium\n/reset — очистить контекст диалога\n/help — эта справка\n\n🎨 Для генерации картинок напишите «нарисуй ...» (Premium)\n\nИли просто напишите сообщение!`);
+        await this.sendMessage(userId, `📋 *Команды:*\n\n/start — начало работы\n/models — выбор модели AI\n/premium — информация о Premium\n/reset — очистить контекст диалога\n/order — заказать создание бота\n/help — эта справка\n\n🎨 Для генерации картинок напишите «нарисуй ...» (Premium)\n\nИли просто напишите сообщение!`);
         break;
 
       default:
@@ -615,6 +641,61 @@ export class ChatBot {
         ]
       }
     };
+  }
+
+  // --- Bot order flow ---
+  isOrderRequest(text) {
+    const lower = text.toLowerCase();
+    return ORDER_KEYWORDS.some((kw) => lower.includes(kw));
+  }
+
+  async startOrderFlow(userId) {
+    this.orderState.set(userId, 'awaiting_description');
+    await this.sendMessage(userId, '📝 Опишите, какой бот вам нужен: тематика канала, какие функции, любые пожелания. Напишите всё в одном сообщении.');
+  }
+
+  async completeOrder(userId, description, username, firstName) {
+    this.orderState.delete(userId);
+
+    try {
+      const db = getDb();
+      const result = db.prepare(`
+        INSERT INTO bot_orders (user_id, username, first_name, description)
+        VALUES (?, ?, ?, ?)
+      `).run(userId, username || null, firstName || null, description);
+
+      const orderId = result.lastInsertRowid;
+      await this.sendMessage(userId, `✅ Заявка #${orderId} принята! Мы свяжемся с вами в ближайшее время.`);
+
+      // Notify admin
+      await this.notifyAdmin({
+        id: orderId,
+        userId,
+        username,
+        firstName,
+        description
+      });
+
+      console.log(`📋 New bot order #${orderId} from user ${userId} (@${username || 'unknown'})`);
+    } catch (error) {
+      console.error('❌ Order save error:', error.message);
+      await this.sendMessage(userId, '⚠️ Не удалось сохранить заявку. Попробуйте позже.');
+    }
+  }
+
+  async notifyAdmin(order) {
+    if (!this.adminUserId) {
+      console.warn('⚠️ ADMIN_USER_ID not set, skipping order notification');
+      return;
+    }
+
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 16);
+    const name = order.firstName || 'Без имени';
+    const handle = order.username ? ` (@${order.username})` : '';
+
+    const text = `📋 Новая заявка на бота (#${order.id})\n👤 ${name}${handle}\n🆔 User ID: ${order.userId}\n\n📝 ${order.description}\n\n📅 ${now}`;
+
+    await this.sendMessage(this.adminUserId, text);
   }
 
   // --- DB helpers ---

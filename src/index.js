@@ -51,11 +51,15 @@ export class AIBusinessBot {
     }
   }
 
-  async generateAndPublish(articles, forceType = null) {
-    let newArticles = await this.planner.filterNewArticles(articles);
-    if (!newArticles.length) {
-      console.log('⚠️ Все статьи уже были опубликованы');
-      return { skipped: true };
+  async generateAndPublish(articles, forceType = null, { skipFilter = false } = {}) {
+    let newArticles = articles;
+
+    if (!skipFilter) {
+      newArticles = await this.planner.filterNewArticles(articles);
+      if (!newArticles.length) {
+        console.log('⚠️ Все статьи уже были опубликованы');
+        return { skipped: true };
+      }
     }
 
     newArticles = await this.factChecker.checkArticles(newArticles);

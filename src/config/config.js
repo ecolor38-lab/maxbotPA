@@ -15,7 +15,8 @@ export const config = {
     botToken: process.env.MAX_BOT_TOKEN,
     chatId: process.env.MAX_CHAT_ID ? parseInt(process.env.MAX_CHAT_ID) : null,
     chatLink: process.env.MAX_CHAT_LINK || null,
-    botLink: process.env.MAX_BOT_LINK || null
+    botLink: process.env.MAX_BOT_LINK || null,
+    adminUserId: process.env.ADMIN_USER_ID || null
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY,

@@ -15,9 +15,8 @@ const ENGAGEMENT_BUTTONS = {
     { type: 'callback', text: '🔎 Подробнее', payload: 'react:more' }
   ],
   digest: [
-    { type: 'callback', text: '1️⃣ Топ-1', payload: 'vote:top1' },
-    { type: 'callback', text: '2️⃣ Топ-2', payload: 'vote:top2' },
-    { type: 'callback', text: '3️⃣ Топ-3', payload: 'vote:top3' }
+    { type: 'callback', text: '🔥 Интересно', payload: 'react:interesting' },
+    { type: 'callback', text: '😐 Мимо', payload: 'react:skip' }
   ],
   tip: [
     { type: 'callback', text: '✅ Полезно', payload: 'react:useful' },

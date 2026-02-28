@@ -193,6 +193,18 @@ function initTables(db) {
     CREATE INDEX IF NOT EXISTS idx_chat_messages_user ON chat_messages(user_id);
     CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at);
     CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id);
+
+    CREATE TABLE IF NOT EXISTS bot_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      username TEXT,
+      first_name TEXT,
+      description TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'new',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bot_orders_user ON bot_orders(user_id);
   `);
 }
 
