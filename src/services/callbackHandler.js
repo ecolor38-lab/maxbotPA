@@ -30,6 +30,7 @@ export class CallbackHandler {
     this.marker = this.loadMarker();
     this.chatBot = new ChatBot(config);
     this.paymentManager = new PaymentManager(config);
+    this.errorDelay = 0;
   }
 
   loadMarker() {
@@ -63,11 +64,26 @@ export class CallbackHandler {
     while (this.running) {
       try {
         await this.poll();
+        this.errorDelay = 0;
       } catch (error) {
-        if (this.running) {
-          console.error('❌ CallbackHandler ошибка:', error.message);
-          await this.sleep(5000);
+        if (!this.running) break;
+
+        const msg = error.message || '';
+        const isTimeout = error.code === 'ECONNABORTED'
+          || error.code === 'ETIMEDOUT'
+          || msg.includes('timeout')
+          || msg.includes('socket hang up');
+
+        if (isTimeout) {
+          // Normal for long-polling — retry immediately
+          continue;
         }
+
+        // Real error — exponential backoff: 5s → 10s → 30s → 60s
+        this.errorDelay = this.errorDelay === 0 ? 5000
+          : Math.min(this.errorDelay * 2, 60000);
+        console.error(`❌ CallbackHandler ошибка: ${msg} (retry in ${this.errorDelay / 1000}s)`);
+        await this.sleep(this.errorDelay);
       }
     }
   }

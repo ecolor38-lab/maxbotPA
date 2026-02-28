@@ -23,7 +23,7 @@ module.exports = {
       retain: 10,
       // Перезапуск при ошибках (не чаще 1 раза в 5 сек)
       min_uptime: 5000,
-      max_restarts: 10,
+      max_restarts: 50,
       restart_delay: 5000,
       // Graceful shutdown
       kill_timeout: 10000,

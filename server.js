@@ -17,8 +17,11 @@ import { AdManager } from './src/services/adManager.js';
 import { PaymentManager } from './src/services/paymentManager.js';
 
 process.on('uncaughtException', (err) => {
-  console.error('❌ Uncaught Exception:', err.message);
-  process.exit(1);
+  console.error('❌ Uncaught Exception:', err.stack || err.message);
+  // Only kill on truly fatal errors (out of memory, etc.)
+  if (err.code === 'ENOMEM' || err.message?.includes('out of memory')) {
+    process.exit(1);
+  }
 });
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Rejection:', err);

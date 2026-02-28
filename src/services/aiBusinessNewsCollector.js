@@ -5,6 +5,9 @@ export class AIBusinessNewsCollector {
     this.config = config;
     this.parser = new Parser({
       timeout: 15000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; MaxBot/1.0; +https://github.com/ecolor38-lab/maxbotPA)'
+      },
       customFields: {
         item: ['media:content', 'content:encoded']
       }
@@ -24,7 +27,7 @@ export class AIBusinessNewsCollector {
       // === ОФИЦИАЛЬНЫЕ БЛОГИ ===
       { name: 'OpenAI Blog', url: 'https://openai.com/blog/rss.xml', type: 'official' },
       { name: 'Google AI Blog', url: 'https://blog.google/technology/ai/rss/', type: 'official' },
-      { name: 'Anthropic', url: 'https://www.anthropic.com/rss.xml', type: 'official' },
+      // Anthropic RSS removed — returns 404, no active feed
 
       // === СОЦСЕТИ ===
 
@@ -42,9 +45,9 @@ export class AIBusinessNewsCollector {
       { name: 'iXBT', url: 'https://www.ixbt.com/export/news.rss', type: 'ru_news' },
       { name: 'vc.ru', url: 'https://vc.ru/rss/all', type: 'ru_news' },
       { name: 'RBC Технологии', url: 'https://rssexport.rbc.ru/rbcnews/news/30/full.rss', type: 'ru_news' },
-      { name: 'Коммерсантъ', url: 'https://www.kommersant.ru/RSS/news.xml', type: 'ru_news' },
+      { name: 'Коммерсантъ', url: 'https://www.kommersant.ru/rss/news.xml', type: 'ru_news' },
       { name: 'ТАСС', url: 'https://tass.ru/rss/v2.xml', type: 'ru_news' },
-      { name: 'Лента.ру', url: 'https://lenta.ru/rss/news/science', type: 'ru_news' },
+      { name: 'Лента.ру', url: 'https://lenta.ru/rss/news', type: 'ru_news' },
       { name: 'DTF', url: 'https://dtf.ru/rss/all', type: 'ru_news' }
     ];
   }
