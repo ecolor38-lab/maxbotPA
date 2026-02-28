@@ -57,16 +57,6 @@ export class MaxPublisher {
     const buttons = ENGAGEMENT_BUTTONS[postType] || ENGAGEMENT_BUTTONS.news_flash;
     const rows = [buttons];
 
-    try {
-      this.affiliateManager ??= new AffiliateManager();
-      const affiliateButtons = this.affiliateManager.buildAffiliateButtons(postText);
-      if (affiliateButtons?.length) {
-        rows.push(affiliateButtons);
-      }
-    } catch {
-      // affiliate not critical
-    }
-
     if (this.botLink) {
       rows.push([{ type: 'link', text: '🤖 Спросить AI-ассистента', url: this.botLink }]);
     }
