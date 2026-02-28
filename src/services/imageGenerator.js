@@ -149,11 +149,25 @@ export class ImageGenerator {
 
     const theme = this.detectTheme(lower);
     const style = this.pickStyle(postType);
+    const composition = this.pickComposition();
 
-    console.log(`   Стиль: ${style.name} | Тема: ${theme.substring(0, 50)}...`);
+    console.log(`   Стиль: ${style.name} | Композиция: ${composition.name} | Тема: ${theme.substring(0, 50)}...`);
 
-    // Use only abstract theme — no post text to avoid content policy blocks on names/politics
-    return `Create a striking image for a technology news channel. Scene: ${theme}. Art direction: ${style.prompt}. The image must be visually arresting, with a clear focal point and professional composition. Aspect ratio 16:9. STRICT: absolutely NO text, NO letters, NO words, NO numbers, NO logos, NO watermarks anywhere in the image. No photorealistic human faces. No real people. Abstract and artistic.`;
+    return `${theme}. ${style.prompt}. ${composition.prompt}. Aspect ratio 16:9. STRICT: absolutely NO text, NO letters, NO words, NO numbers, NO logos, NO watermarks anywhere in the image.`;
+  }
+
+  pickComposition() {
+    const compositions = [
+      { name: 'closeup', prompt: 'Extreme macro close-up shot, shallow depth of field, bokeh background' },
+      { name: 'wide', prompt: 'Epic wide establishing shot, vast scale, dramatic perspective' },
+      { name: 'overhead', prompt: 'Overhead bird-eye view, flat lay composition, geometric arrangement' },
+      { name: 'dutch', prompt: 'Dynamic dutch angle, diagonal lines, sense of motion and energy' },
+      { name: 'symmetry', prompt: 'Perfect bilateral symmetry, centered subject, mirror-like balance' },
+      { name: 'rule_of_thirds', prompt: 'Subject placed at rule-of-thirds intersection, natural visual flow' },
+      { name: 'frame_in_frame', prompt: 'Frame within a frame composition, layered depth, framing element in foreground' },
+      { name: 'negative_space', prompt: 'Bold use of negative space, isolated subject, breathing room around focal point' }
+    ];
+    return compositions[Math.floor(Math.random() * compositions.length)];
   }
 
   detectTheme(text) {

@@ -326,24 +326,26 @@ export class AISummarizer {
   }
 
   async callClaude(system, prompt) {
+    const fullPrompt = prompt + '\n\nВАЖНО: пост ОБЯЗАТЕЛЬНО должен быть длиной 2000-3000 символов. Короткие посты (менее 1500 символов) ЗАПРЕЩЕНЫ. Пиши подробно, развёрнуто, с деталями и примерами.';
     const response = await this.anthropic.messages.create({
       model: this.config.anthropic.model || 'claude-sonnet-4-20250514',
-      max_tokens: 3000,
+      max_tokens: 4096,
       system: system,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [{ role: 'user', content: fullPrompt }],
       temperature: 0.8
     });
     return response.content[0].text;
   }
 
   async callOpenAI(system, prompt) {
+    const fullPrompt = prompt + '\n\nВАЖНО: пост ОБЯЗАТЕЛЬНО должен быть длиной 2000-3000 символов. Короткие посты (менее 1500 символов) ЗАПРЕЩЕНЫ. Пиши подробно, развёрнуто, с деталями и примерами.';
     const response = await this.openai.chat.completions.create({
       model: this.config.openai.model || 'gpt-4-turbo-preview',
       messages: [
         { role: 'system', content: system },
-        { role: 'user', content: prompt }
+        { role: 'user', content: fullPrompt }
       ],
-      max_tokens: 3000,
+      max_tokens: 4096,
       temperature: 0.8
     });
     return response.choices[0].message.content;
