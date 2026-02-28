@@ -11,8 +11,7 @@ const ENGAGEMENT_BUTTONS = {
   ],
   analysis: [
     { type: 'callback', text: '👍 Согласен', payload: 'react:agree' },
-    { type: 'callback', text: '👎 Не согласен', payload: 'react:disagree' },
-    { type: 'callback', text: '🔎 Подробнее', payload: 'react:more' }
+    { type: 'callback', text: '👎 Не согласен', payload: 'react:disagree' }
   ],
   digest: [
     { type: 'callback', text: '🔥 Интересно', payload: 'react:interesting' },
