@@ -66,15 +66,20 @@ export class AffiliateManager {
     const affiliates = db.prepare('SELECT * FROM affiliates WHERE active = 1').all();
     const lower = text.toLowerCase();
 
-    return affiliates
-      .filter((aff) => lower.includes(aff.keyword))
-      .slice(0, 2)
-      .map((aff) => ({
-        id: aff.id,
-        name: aff.name,
-        url: aff.ref_url || aff.url,
-        category: aff.category
-      }));
+    const matched = affiliates.filter((aff) => lower.includes(aff.keyword));
+
+    // Deduplicate by URL — keep first match per unique URL
+    const seenUrls = new Set();
+    const unique = [];
+    for (const aff of matched) {
+      const url = aff.ref_url || aff.url;
+      if (!seenUrls.has(url)) {
+        seenUrls.add(url);
+        unique.push({ id: aff.id, name: aff.name, url, category: aff.category });
+      }
+    }
+
+    return unique.slice(0, 2);
   }
 
   buildAffiliateButtons(text) {
