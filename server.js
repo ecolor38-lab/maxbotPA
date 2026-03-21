@@ -236,13 +236,33 @@ app.post('/api/payments/webhook', async (req, res) => {
   res.sendStatus(200);
 });
 
-// Payment success page
-app.get('/payment-success', (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Оплата</title>
+// Payment success page — check actual payment status
+app.get('/payment-success', async (req, res) => {
+  // Check if user actually has premium (webhook may have already processed)
+  const userId = req.query.user_id;
+  let paid = false;
+  if (userId) {
+    try {
+      const { getDb } = await import('./src/db/database.js');
+      const db = getDb();
+      const user = db.prepare('SELECT is_premium FROM bot_users WHERE user_id = ?').get(String(userId));
+      paid = !!user?.is_premium;
+    } catch (_) { /* ignore */ }
+  }
+
+  if (paid) {
+    res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Оплата</title>
 <style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f0f0f0}
 .card{background:#fff;padding:40px;border-radius:12px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.1)}
 h1{color:#4CAF50}</style></head>
 <body><div class="card"><h1>Оплата прошла успешно!</h1><p>Premium-доступ активирован. Вернитесь в MAX.</p></div></body></html>`);
+  } else {
+    res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Оплата</title>
+<style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;background:#f0f0f0}
+.card{background:#fff;padding:40px;border-radius:12px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+h1{color:#FF9800}.retry{display:inline-block;margin-top:16px;padding:10px 24px;background:#4CAF50;color:#fff;border-radius:8px;text-decoration:none}</style></head>
+<body><div class="card"><h1>Оплата не завершена</h1><p>Платёж не был оплачен или ещё обрабатывается.</p><p>Вернитесь в MAX и попробуйте снова.</p></div></body></html>`);
+  }
 });
 
 app.use((err, req, res, _next) => {

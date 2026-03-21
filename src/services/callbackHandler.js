@@ -165,7 +165,7 @@ export class CallbackHandler {
           type: 'inline_keyboard',
           payload: {
             buttons: [
-              [{ type: 'link', text: '💳 Оплатить 390₽', url: paymentUrl }]
+              [{ type: 'link', text: '💳 Оплатить 990₽', url: paymentUrl }]
             ]
           }
         };

@@ -330,7 +330,7 @@ export class ChatBot {
         } else {
           await this.sendMessage(
             userId,
-            `💎 *Premium-доступ* — 390₽/мес\n\n✅ ${this.PREMIUM_DAILY_LIMIT} сообщений/день (вместо ${this.FREE_DAILY_LIMIT})\n✅ 🎨 Генерация картинок (${IMAGE_DAILY_LIMIT}/день)\n✅ Приоритетные ответы\n\nИспользовано сегодня: ${user.messages_today}/${this.FREE_DAILY_LIMIT}`,
+            `💎 *Premium-доступ* — 990₽/мес\n\n✅ ${this.PREMIUM_DAILY_LIMIT} сообщений/день (вместо ${this.FREE_DAILY_LIMIT})\n✅ 🎨 Генерация картинок (${IMAGE_DAILY_LIMIT}/день)\n✅ Приоритетные ответы\n\nИспользовано сегодня: ${user.messages_today}/${this.FREE_DAILY_LIMIT}`,
             this.buildPremiumKeyboard()
           );
         }
@@ -637,7 +637,7 @@ export class ChatBot {
       type: 'inline_keyboard',
       payload: {
         buttons: [
-          [{ type: 'callback', text: '💎 Подключить Premium — 390₽/мес', payload: 'premium:buy' }]
+          [{ type: 'callback', text: '💎 Подключить Premium — 990₽/мес', payload: 'premium:buy' }]
         ]
       }
     };

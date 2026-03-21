@@ -18,6 +18,7 @@ export class BotScheduler {
     this.schedule = process.env.CRON_SCHEDULE_1 || '0 * * * *';
     this.todaySlotIndex = 0;
     this.lastSlotDay = new Date().getDate();
+    this.lastPublishedSourceType = null;
   }
 
   start() {
@@ -131,13 +132,29 @@ export class BotScheduler {
     const postType = getPostTypeForSlot(this.todaySlotIndex);
     this.todaySlotIndex++;
 
-    const post = pending[0];
-    console.log(`📤 Публикую пост #${post.id} [${postType}]...\n`);
+    const post = this.pickDiversePost(pending);
+    console.log(`📤 Публикую пост #${post.id} [${postType}] (${post.articles[0]?.type || '?'})...\n`);
 
     const result = await this.bot.generateAndPublish(post.articles, postType, { skipFilter: true });
+    this.lastPublishedSourceType = post.articles[0]?.type || null;
     await this.planner.markAsPublished(post.id, result);
 
     console.log('✅ Опубликовано');
+  }
+
+  pickDiversePost(pending) {
+    if (!this.lastPublishedSourceType || pending.length <= 1) {
+      return pending[0];
+    }
+
+    // If last was ru_news, prefer foreign; if last was foreign, prefer ru_news
+    const preferForeign = this.lastPublishedSourceType === 'ru_news';
+    const diverse = pending.find((p) => {
+      const type = p.articles[0]?.type;
+      return preferForeign ? type !== 'ru_news' : type === 'ru_news';
+    });
+
+    return diverse || pending[0];
   }
 
   async collectAndPlan() {

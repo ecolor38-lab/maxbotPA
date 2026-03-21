@@ -925,7 +925,7 @@ describe('PaymentManager', () => {
       yookassa: { shopId: 'shop1', secretKey: 'secret1' },
       max: { botToken: 'test' }
     });
-    assert.equal(pm.PREMIUM_PRICE, 390);
+    assert.equal(pm.PREMIUM_PRICE, 990);
     assert.equal(pm.PREMIUM_DAYS, 30);
     assert.equal(pm.configured, true);
   });

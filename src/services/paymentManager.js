@@ -15,7 +15,7 @@ export class PaymentManager {
     this.botToken = config.max?.botToken;
     this.apiUrl = 'https://platform-api.max.ru';
 
-    this.PREMIUM_PRICE = 390; // rub
+    this.PREMIUM_PRICE = 990; // rub
     this.PREMIUM_DAYS = 30;
   }
 
@@ -29,6 +29,7 @@ export class PaymentManager {
     }
 
     const idempotenceKey = `${userId}-${Date.now()}`;
+    const returnUrl = `${this.returnUrl}?user_id=${encodeURIComponent(userId)}`;
 
     let payment;
     try {
@@ -41,7 +42,7 @@ export class PaymentManager {
           },
           confirmation: {
             type: 'redirect',
-            return_url: this.returnUrl
+            return_url: returnUrl
           },
           capture: true,
           metadata: { user_id: userId },

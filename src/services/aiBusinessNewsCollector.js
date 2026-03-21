@@ -6,7 +6,9 @@ export class AIBusinessNewsCollector {
     this.parser = new Parser({
       timeout: 15000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; MaxBot/1.0; +https://github.com/ecolor38-lab/maxbotPA)'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
       },
       customFields: {
         item: ['media:content', 'content:encoded']
@@ -73,15 +75,48 @@ export class AIBusinessNewsCollector {
       console.log('');
     }
 
-    const sorted = allArticles.sort((a, b) => b.pubDate - a.pubDate).slice(0, 20);
+    // Balanced selection: guarantee minimum slots per category
+    const minSlots = { news: 5, ru_news: 10, official: 2, social: 3 };
+    const totalSlots = 20;
+    const selected = [];
 
-    console.log(`✅ Всего собрано: ${sorted.length} статей`);
+    // Group articles by type, sorted by date within each
+    const byType = {};
     for (const group of groups) {
-      const count = allArticles.filter((a) => a.type === group.type).length;
-      console.log(`   ${group.label.split(' ')[0]} ${group.type}: ${count}`);
+      byType[group.type] = allArticles
+        .filter((a) => a.type === group.type)
+        .sort((a, b) => b.pubDate - a.pubDate);
     }
 
-    return sorted;
+    // First pass: fill minimum slots per category
+    for (const [type, min] of Object.entries(minSlots)) {
+      const pool = byType[type] || [];
+      const take = pool.splice(0, min);
+      selected.push(...take);
+    }
+
+    // Second pass: fill remaining slots from largest pools
+    let remaining = totalSlots - selected.length;
+    while (remaining > 0) {
+      const pools = Object.values(byType).filter((p) => p.length > 0);
+      if (pools.length === 0) break;
+      pools.sort((a, b) => b.length - a.length);
+      const item = pools[0].shift();
+      selected.push(item);
+      remaining--;
+    }
+
+    // Final sort by date
+    selected.sort((a, b) => b.pubDate - a.pubDate);
+
+    console.log(`✅ Всего собрано: ${allArticles.length} → отобрано: ${selected.length} статей`);
+    for (const group of groups) {
+      const raw = allArticles.filter((a) => a.type === group.type).length;
+      const sel = selected.filter((a) => a.type === group.type).length;
+      console.log(`   ${group.label.split(' ')[0]} ${group.type}: ${sel}/${raw}`);
+    }
+
+    return selected;
   }
 
   async collectFromSources(sources, allArticles) {
@@ -92,7 +127,7 @@ export class AIBusinessNewsCollector {
         const feed = await this.parser.parseURL(source.url);
 
         // Для общих лент (РБК, ТАСС, Коммерсантъ) берём больше — фильтруем по ключевым словам
-        const scanLimit = source.type === 'ru_news' ? 20 : 5;
+        const scanLimit = source.type === 'ru_news' ? 20 : 10;
         const articles = feed.items
           .slice(0, scanLimit)
           .filter((item) => this.isRelevant(item))
